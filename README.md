@@ -1,4 +1,4 @@
-# NyaDB [![npm](https://img.shields.io/npm/v/nyadb)](https://www.npmjs.com/package/nyadb) [![npm](https://img.shields.io/npm/dw/nyadb)](https://www.npmjs.com/package/nyadb) [![Minimum NodeJS version](https://img.shields.io/node/v/nyadb)](https://www.npmjs.com/package/nyadb) [![Dependents (via libraries.io)](https://img.shields.io/librariesio/dependents/npm/nyadb)](https://libraries.io/npm/nyadb/dependents)
+# NyaDB
 
 Simple JSON "database" for NodeJS.
 

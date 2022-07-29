@@ -1,0 +1,33 @@
+{
+  "name": "@decaded/nyadb",
+  "version": "1.0.5",
+  "description": "Simple JSON \"database\" for NodeJS.",
+  "main": "index.js",
+  "scripts": {
+    "test": "node tests/index.js"
+  },
+  "author": {
+    "name": "Decaded",
+    "url": "https://decaded.ga"
+  },
+  "homepage": "https://github.com/Decaded/NyaDB",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Decaded/NyaDB.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Decaded/NyaDB/issues"
+  },
+  "keywords": [
+    "JSON",
+    "database",
+    "cache"
+  ],
+  "dependencies": {
+    "json-format": "^1.0.1"
+  },
+  "devDependencies": {
+    "eslint": "^8.11.0"
+  },
+  "license": "MIT"
+}
