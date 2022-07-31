@@ -56,7 +56,7 @@ async function scheduler() {
 }
 
 // Start scheduler
-setInterval(scheduler, 100);
+setInterval(scheduler, 250);
 
 /**
  * Main NyaDB class that handles all database operations and keeps track of all actions.
@@ -76,10 +76,12 @@ setInterval(scheduler, 100);
  */
 module.exports = class NyaDB {
 	constructor() {
-		// Load the database and make sure it is up to date
+		// Load the database
+		this.database = database;
+		// and make sure it is up to date
 		setInterval(() => {
 			this.database = database;
-		}, 150);
+		}, 500);
 	}
 	createDatabase(name) {
 		// Schedule the action
