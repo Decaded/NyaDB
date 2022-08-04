@@ -1,6 +1,6 @@
 {
   "name": "@decaded/nyadb",
-  "version": "1.0.6",
+  "version": "1.1.0",
   "description": "Simple JSON \"database\" for NodeJS.",
   "main": "index.js",
   "scripts": {
@@ -29,5 +29,6 @@
   "devDependencies": {
     "eslint": "^8.11.0"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "typings": "./index.d.ts"
 }
