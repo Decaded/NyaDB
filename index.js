@@ -1,21 +1,23 @@
-const { writeFileSync, existsSync, mkdirSync } = require("fs");
+const { writeFileSync, existsSync, mkdirSync } = require('fs');
 
 // Create "./NyaDB" folder if it doesn't exist
-if (!existsSync("./NyaDB")) {
-	mkdirSync("./NyaDB");
+if (!existsSync('./NyaDB')) {
+	mkdirSync('./NyaDB');
 }
 // Create "./NyaDB/database.json" file if it doesn't exist
-if (!existsSync("./NyaDB/database.json")) {
-	writeFileSync("./NyaDB/database.json", "{}");
+if (!existsSync('./NyaDB/database.json')) {
+	writeFileSync('./NyaDB/database.json', '{}');
 }
 
-const createDatabase = require("./functions/createDatabase");
-const deleteDatabase = require("./functions/deleteDatabase");
-const saveDatabase = require("./functions/saveDatabase");
-const loadDatabase = require("./functions/loadDatabase");
-const setDatabase = require("./functions/setDatabase");
-const scheduledActions = []; // Array of scheduled actions (load, save, create, delete, set) and the name of the database to be used in the action (optional) (ex: { action: "create", name: "databaseName", data: "data" })
-let database = loadDatabase(); // The database object
+const createDatabase = require('./functions/createDatabase');
+const deleteDatabase = require('./functions/deleteDatabase');
+const saveDatabase = require('./functions/saveDatabase');
+const loadDatabase = require('./functions/loadDatabase');
+const setDatabase = require('./functions/setDatabase');
+// Array of scheduled actions (load, save, create, delete, set) and the name of the database to be used in the action (optional) (ex: { action: "create", name: "databaseName", data: "data" })
+const scheduledActions = [];
+// The database object
+let database = loadDatabase();
 
 function scheduleAction(action, name, data) {
 	scheduledActions.push({ action, name, data });
@@ -33,23 +35,23 @@ async function scheduler() {
 	if (scheduledActions.length > 0) {
 		const action = scheduledActions.shift();
 		switch (action.action) {
-			case "create":
+			case 'create':
 				createDatabase(action.name);
 				break;
-			case "delete":
+			case 'delete':
 				deleteDatabase(action.name);
 				break;
-			case "save":
+			case 'save':
 				saveDatabase(database);
 				break;
-			case "load":
+			case 'load':
 				database = loadDatabase();
 				break;
-			case "set":
+			case 'set':
 				setDatabase(database, action.name, action.data);
 				break;
 			default:
-				console.log("Error: Unknown action");
+				console.log('Error: Unknown action');
 				break;
 		}
 	}
@@ -85,21 +87,21 @@ module.exports = class NyaDB {
 	}
 	createDatabase(name) {
 		// Schedule the action
-		scheduleAction("create", name);
+		scheduleAction('create', name);
 		// Schedule the load action to reload the database
-		scheduleAction("load");
+		scheduleAction('load');
 	}
 	deleteDatabase(name) {
 		// Load the database to ensure it is up to date
-		scheduleAction("load");
+		scheduleAction('load');
 		// Schedule the action
-		scheduleAction("delete", name);
+		scheduleAction('delete', name);
 	}
 	setDatabase(name, data) {
 		// Schedule the set action
-		scheduleAction("set", name, data);
+		scheduleAction('set', name, data);
 		// Schedule the load action to reload the database
-		scheduleAction("load");
+		scheduleAction('load');
 	}
 	getDatabase(name) {
 		// loop through the database and return only the database with the name provided if it exists, otherwise return null

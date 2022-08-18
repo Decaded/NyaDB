@@ -1,4 +1,4 @@
-const { writeFileSync } = require("fs");
+const { writeFileSync } = require('fs');
 
 /**
  * Updates the database with the new data.
@@ -19,7 +19,7 @@ const { writeFileSync } = require("fs");
 module.exports = function updateDatabase(cache, name, data) {
 	// Check if the database exists in the database.json file
 	if (!cache[name]) {
-		console.log("Database doesn't exist " + name);
+		console.log('Database does not exist ' + name);
 		return false;
 	}
 
@@ -30,6 +30,6 @@ module.exports = function updateDatabase(cache, name, data) {
 	};
 
 	// Save the database
-	writeFileSync("./NyaDB/database.json", JSON.stringify(cache));
+	writeFileSync('./NyaDB/database.json', JSON.stringify(cache));
 	return true;
 };

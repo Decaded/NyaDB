@@ -1,4 +1,4 @@
-const { writeFileSync, readFileSync } = require("fs");
+const { writeFileSync, readFileSync } = require('fs');
 
 /**
  *
@@ -9,12 +9,12 @@ module.exports = function createDatabase(name) {
 	// Check if the database exists in the database.json file
 	let database = {};
 	try {
-		database = JSON.parse(readFileSync("./NyaDB/database.json"));
+		database = JSON.parse(readFileSync('./NyaDB/database.json'));
 	} catch (e) {
-		console.log("Error loading database: " + e);
+		console.log('Error loading database: ' + e);
 	}
 	if (database[name]) {
-		console.log("Database already exists: " + name);
+		console.log('Database already exists: ' + name);
 		return;
 	}
 
@@ -22,7 +22,7 @@ module.exports = function createDatabase(name) {
 	database[name] = {};
 
 	// Save the database
-	writeFileSync("./NyaDB/database.json", JSON.stringify(database));
+	writeFileSync('./NyaDB/database.json', JSON.stringify(database));
 
 	return true;
 };

@@ -1,5 +1,5 @@
-const { readFileSync, writeFileSync } = require("fs");
-const jsonFormat = require("json-format");
+const { readFileSync, writeFileSync } = require('fs');
+const jsonFormat = require('json-format');
 
 /**
  *
@@ -11,12 +11,12 @@ module.exports = function deleteDatabase(name) {
 	// Check if the database exists in the database.json file
 	let database = {};
 	try {
-		database = JSON.parse(readFileSync("./NyaDB/database.json"));
+		database = JSON.parse(readFileSync('./NyaDB/database.json'));
 	} catch (e) {
-		console.log("Error loading database: " + e);
+		console.log('Error loading database: ' + e);
 	}
 	if (!database[name]) {
-		console.log("Database doesn't exist");
+		console.log('Database does not exist: ' + name);
 		return false;
 	}
 
@@ -24,12 +24,12 @@ module.exports = function deleteDatabase(name) {
 	delete database[name];
 
 	// Format the database before saving
-	let formattedDatabase = jsonFormat(database, {
-		type: "tab",
+	const formattedDatabase = jsonFormat(database, {
+		type: 'tab',
 	});
 
 	// Save the database
-	writeFileSync("./NyaDB/database.json", formattedDatabase);
+	writeFileSync('./NyaDB/database.json', formattedDatabase);
 
 	return true;
 };
