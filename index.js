@@ -18,9 +18,22 @@ const setDatabase = require('./functions/setDatabase');
 const scheduledActions = [];
 // The database object
 let database = loadDatabase();
+let isRunning = false;
 
-function scheduleAction(action, name, data) {
+async function scheduleAction(action, name, data) {
 	scheduledActions.push({ action, name, data });
+	synchronizedScheduler()
+}
+
+function synchronizedScheduler() {
+	if (isRunning) return;
+	if (scheduledActions.length <= 0) return;
+
+	isRunning = true;
+	scheduler();
+	isRunning = false;
+
+	synchronizedScheduler();
 }
 
 /**
@@ -31,34 +44,31 @@ function scheduleAction(action, name, data) {
  * @param {string} name - The name of the database to be used in the action (optional) (ex: "databaseName")
  * @param {object} data - The data to be used in the action (optional) (ex: { key: "value" })
  */
-async function scheduler() {
-	if (scheduledActions.length > 0) {
-		const action = scheduledActions.shift();
-		switch (action.action) {
-			case 'create':
-				createDatabase(action.name);
-				break;
-			case 'delete':
-				deleteDatabase(action.name);
-				break;
-			case 'save':
-				saveDatabase(database);
-				break;
-			case 'load':
-				database = loadDatabase();
-				break;
-			case 'set':
-				setDatabase(database, action.name, action.data);
-				break;
-			default:
-				console.log('Error: Unknown action');
-				break;
-		}
+function scheduler() {
+	const action = scheduledActions.shift();
+	switch (action.action) {
+		case 'create':
+			createDatabase(action.name);
+			break;
+		case 'delete':
+			deleteDatabase(action.name);
+			break;
+		case 'save':
+			saveDatabase(database);
+			break;
+		case 'load':
+			database = loadDatabase();
+			break;
+		case 'set':
+			setDatabase(database, action.name, action.data);
+			break;
+		default:
+			console.log('Error: Unknown action: ' + action.action);
+			break;
 	}
 }
 
 // Start scheduler
-setInterval(scheduler, 250);
 
 /**
  * Main NyaDB class that handles all database operations and keeps track of all actions.
