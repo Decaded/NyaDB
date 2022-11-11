@@ -22,7 +22,7 @@ let isRunning = false;
 
 async function scheduleAction(action, name, data) {
 	scheduledActions.push({ action, name, data });
-	synchronizedScheduler()
+	synchronizedScheduler();
 }
 
 function synchronizedScheduler() {
