@@ -23,10 +23,6 @@ nyadb.setDatabase('fruits', mockDatabase);
 // Create a database called "deleteMe"
 nyadb.createDatabase('deleteMe');
 
-setTimeout(() => {
-	console.log(nyadb.database);
-}, 5000);
-
 // Log the contents of the database "numbers" to the console after 6 seconds
 setTimeout(() => {
 	console.log(nyadb.getDatabase('numbers'));
