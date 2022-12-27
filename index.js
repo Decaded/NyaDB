@@ -68,8 +68,6 @@ function scheduler() {
 	}
 }
 
-// Start scheduler
-
 /**
  * Main NyaDB class that handles all database operations and keeps track of all actions.
  * @class
@@ -87,14 +85,6 @@ function scheduler() {
  * nyadb.getActionsCounter(); // Returns the actions counter object. This is not saved to the file, so it will always start at zero when you start the program.
  */
 module.exports = class NyaDB {
-	constructor() {
-		// Load the database
-		this.database = database;
-		// and make sure it is up to date
-		setInterval(() => {
-			this.database = database;
-		}, 250);
-	}
 	createDatabase(name) {
 		// Schedule the action
 		scheduleAction('create', name);
@@ -114,15 +104,15 @@ module.exports = class NyaDB {
 		scheduleAction('load');
 	}
 	getDatabase(name) {
-		// loop through the database and return only the database with the name provided if it exists, otherwise return null
-		for (const key in this.database) {
+		// Loop through the database and return only the database with the name provided if it exists, otherwise return null
+		for (const key in database) {
 			if (key === name) {
-				return this.database[key];
+				return database[key];
 			}
 		}
 	}
 	getDatabaseList() {
 		// Return an array of all database names
-		return Object.keys(this.database);
+		return Object.keys(database);
 	}
 };
