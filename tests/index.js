@@ -40,8 +40,12 @@ setTimeout(() => {
 // Delete the database "deleteMe" after 10 seconds, then log all the databases to the console again
 setTimeout(() => {
 	nyadb.deleteDatabase('deleteMe');
-	console.log(nyadb.getDatabaseList());
 }, 10000);
+
+// Log all the databases to the console after 11 seconds
+setTimeout(() => {
+	console.log(nyadb.getDatabaseList());
+}, 11000);
 
 // Close tests
 setTimeout(() => {
