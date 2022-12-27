@@ -1,10 +1,15 @@
 # NyaDB
 
 Simple JSON "database" for NodeJS.
+***
+All files (databases) will be stored in the `NyaDB` folder in the project's root directory.
+
+The cache is automatically updated every 0.25 seconds. The files are always up to date.
+***
 
 # Installation  
   ```sh
-  npm install @decaded/nyadb
+  npm i @decaded/nyadb
   ```
 
 # Usage
@@ -31,10 +36,14 @@ Simple JSON "database" for NodeJS.
 ### Retrieving data
   ```js 
   nyadb.getDatabase('test'); // Returns the 'test' database
-  nyadb.getDatabaseList(); // Returns an array of all databases names
+  nyadb.getDatabaseList(); // Returns the names of all databases in an array
   ```
   
 ### Deleting data
   ```js
   nyadb.deleteDatabase('test'); // Deletes the database 'test' 
   ```
+
+___
+### Like what i do? 
+<a href='https://ko-fi.com/decaded' target='_blank'><img height='30' style='border:0px;height:40px;' src='https://az743702.vo.msecnd.net/cdn/kofi3.png?v=0' border='0' alt='Buy Me a Coffee at ko-fi.com' />
