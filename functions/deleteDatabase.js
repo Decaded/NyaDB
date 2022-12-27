@@ -2,7 +2,7 @@ const { readFileSync, writeFileSync } = require('fs');
 const jsonFormat = require('json-format');
 
 /**
- *
+ * Deletes the database.
  * @param {string} name - The name of the database to delete
  * @returns {boolean} - Whether or not the database was deleted
  */

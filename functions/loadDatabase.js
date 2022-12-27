@@ -1,5 +1,10 @@
 const { readFileSync } = require('fs');
 
+/**
+ * Loads database.
+ * @returns {object} database - The loaded database
+ */
+
 module.exports = function loadDatabase() {
 	// Load the database
 	let database = {};
