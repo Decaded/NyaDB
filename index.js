@@ -11,12 +11,15 @@ if (!existsSync('./NyaDB/database.json')) {
 
 const createDatabase = require('./functions/createDatabase');
 const deleteDatabase = require('./functions/deleteDatabase');
-const saveDatabase = require('./functions/saveDatabase');
 const loadDatabase = require('./functions/loadDatabase');
 const setDatabase = require('./functions/setDatabase');
-// Array of scheduled actions (load, save, create, delete, set) and the name of the database to be used in the action (optional) (ex: { action: "create", name: "databaseName", data: "data" })
+
+/*
+ * Array of scheduled actions (load, create, delete, set) and the name of the database to be used in the action (optional)
+ * (ex: { action: "create", name: "databaseName", data: "data" })
+ */
 const scheduledActions = [];
-// The database object
+
 let database = loadDatabase();
 let isRunning = false;
 
@@ -52,9 +55,6 @@ function scheduler() {
 			break;
 		case 'delete':
 			deleteDatabase(action.name);
-			break;
-		case 'save':
-			saveDatabase(database);
 			break;
 		case 'load':
 			database = loadDatabase();
@@ -93,7 +93,7 @@ module.exports = class NyaDB {
 		// and make sure it is up to date
 		setInterval(() => {
 			this.database = database;
-		}, 500);
+		}, 250);
 	}
 	createDatabase(name) {
 		// Schedule the action
@@ -102,10 +102,10 @@ module.exports = class NyaDB {
 		scheduleAction('load');
 	}
 	deleteDatabase(name) {
-		// Load the database to ensure it is up to date
-		scheduleAction('load');
 		// Schedule the action
 		scheduleAction('delete', name);
+		// Schedule the load action to reload the database
+		scheduleAction('load');
 	}
 	setDatabase(name, data) {
 		// Schedule the set action
