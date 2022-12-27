@@ -3,8 +3,6 @@
 Simple JSON "database" for NodeJS.
 ***
 All files (databases) will be stored in the `NyaDB` folder in the project's root directory.
-
-The cache is automatically updated every 0.25 seconds. The files are always up to date.
 ***
 
 # Installation  
