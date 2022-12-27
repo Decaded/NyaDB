@@ -1,4 +1,5 @@
 const { writeFileSync, readFileSync } = require('fs');
+const jsonFormat = require('json-format');
 
 /**
  *
@@ -21,8 +22,13 @@ module.exports = function createDatabase(name) {
 	// Create the database
 	database[name] = {};
 
+	// Format the database before saving
+	const formattedDatabase = jsonFormat(database, {
+		type: 'tab',
+	});
+
 	// Save the database
-	writeFileSync('./NyaDB/database.json', JSON.stringify(database));
+	writeFileSync('./NyaDB/database.json', formattedDatabase);
 
 	return true;
 };
