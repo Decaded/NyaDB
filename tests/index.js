@@ -23,28 +23,36 @@ nyadb.setDatabase('fruits', mockDatabase);
 // Create a database called "deleteMe"
 nyadb.createDatabase('deleteMe');
 
-// Log the contents of the database "numbers" to the console after 6 seconds
-setTimeout(() => {
-	console.log(nyadb.getDatabase('numbers'));
-}, 6000);
+// Log the contents of the database "numbers" to the console
+console.log('Log "numbers" database');
+console.log(nyadb.getDatabase('numbers'));
+console.log('\n');
 
-// Log all the databases to the console after 8 seconds
-setTimeout(() => {
-	console.log(nyadb.getDatabaseList());
-}, 8000);
+// Log all the databases to the console
+console.log('Get database list');
+console.log(nyadb.getDatabaseList());
+console.log('\n');
 
-// Delete the database "deleteMe" after 10 seconds, then log all the databases to the console again
-setTimeout(() => {
-	nyadb.deleteDatabase('deleteMe');
-}, 10000);
+// Log 'fruits' database
+console.log('Log "fruits" database');
+console.log(nyadb.getDatabase('fruits'));
+console.log('\n');
 
-// Log all the databases to the console after 11 seconds
-setTimeout(() => {
-	console.log(nyadb.getDatabaseList());
-}, 11000);
+// Log "yellow" key from "fruits" database
+console.log('Log "yellow" key from "fruits" database');
+console.log(nyadb.getDatabase('fruits').yellow);
+console.log('\n');
+
+// Delete the database "deleteMe", then log all the databases to the console again
+console.log('Delete "deleteMe" database');
+nyadb.deleteDatabase('deleteMe');
+console.log('\n');
+
+// Log all the databases to the console
+console.log('Log all databases');
+console.log(nyadb.getDatabaseList());
+console.log('\n');
 
 // Close tests
-setTimeout(() => {
-	console.log('Done');
-	process.exit();
-}, 12000);
+console.log('Done');
+process.exit();
