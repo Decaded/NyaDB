@@ -1,6 +1,11 @@
-# NyaDB
-
+# NyaDB 
 Simple JSON "database" for NodeJS.
+
+![npm (scoped)](https://img.shields.io/npm/v/@decaded/nyadb) 
+![npm bundle size (scoped)](https://img.shields.io/bundlephobia/min/@decaded/nyadb)
+![npm](https://img.shields.io/npm/dt/@decaded/nyadb)
+![GitHub](https://img.shields.io/github/license/Decaded/NyaDB)
+
 ***
 All files (databases) will be stored in the `NyaDB` folder in the project's root directory.
 ***
