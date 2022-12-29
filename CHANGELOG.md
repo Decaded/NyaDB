@@ -4,6 +4,14 @@ All notable changes to the project will be documented in this file.
 
 ___
 
+## [1.4.2](https://www.npmjs.com/package/@decaded/nyadb/v/1.4.2) (29-12-2022)
+
+* Updated [README](https://github.com/Decaded/NyaDB/commit/18a59db007b9088011b3fd7bf51387c6edd45de2)
+  * Added badges
+* Added [license](https://github.com/Decaded/NyaDB/blob/master/LICENSE.md)
+
+___
+
 ## [1.4.1](https://www.npmjs.com/package/@decaded/nyadb/v/1.4.1) (29-12-2022)
 
 * Added CHANGELOG (this file)
