@@ -98,13 +98,13 @@ module.exports = class NyaDB {
 		scheduleAction('load');
 	}
 	setDatabase(name, data) {
-		// Schedule the set action
+		// Schedule the action
 		scheduleAction('set', name, data);
 		// Schedule the load action to reload the database
 		scheduleAction('load');
 	}
 	getDatabase(name) {
-		// Loop through the database and return only the database with the name provided if it exists, otherwise return null
+		// Loop through the database and return only the database with the name provided if it exists
 		for (const key in database) {
 			if (key === name) {
 				return database[key];
