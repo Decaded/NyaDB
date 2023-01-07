@@ -8,7 +8,11 @@ const mockDatabase = {
 // Create a database called "numbers"
 nyadb.createDatabase('numbers');
 // insert increasing numbers into the database, one by one
-for (let i = 0; i < 10; i++) {
+for (let i = 0; i < 1000; i++) {
+	nya(i);
+}
+
+async function nya(i) {
 	nyadb.setDatabase('numbers', {
 		[i]: i,
 	});
