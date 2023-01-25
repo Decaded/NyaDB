@@ -40,6 +40,18 @@ function synchronizedScheduler() {
 }
 
 /**
+ * Deprecation warning anti-console-spam thingy
+ * @todo remove in next major version
+ */
+const warningEmitted = {
+	create: false,
+	delete: false,
+	set: false,
+	get: false,
+	getList: false,
+};
+
+/**
  * Scheduler for database functions. This is used to prevent corruption of the database.json file.
  * Scheduler calls the appropriate function and ensures that no two functions are called at the same time.
  * Scheduler runs in background every 0.1 seconds and checks if there are any scheduled actions. If there are, it runs the scheduled action.
@@ -85,25 +97,40 @@ function scheduler() {
  * nyadb.getActionsCounter(); // Returns the actions counter object. This is not saved to the file, so it will always start at zero when you start the program.
  */
 module.exports = class NyaDB {
-	createDatabase(name) {
+	/**
+	 * Create database with given name, if it doesn't exist
+	 */
+	create(name) {
 		// Schedule the action
 		scheduleAction('create', name);
 		// Schedule the load action to reload the database
 		scheduleAction('load');
 	}
-	deleteDatabase(name) {
+
+	/**
+	 * Delete database with provided name, if exist
+	 */
+	delete(name) {
 		// Schedule the action
 		scheduleAction('delete', name);
 		// Schedule the load action to reload the database
 		scheduleAction('load');
 	}
-	setDatabase(name, data) {
+
+	/**
+	 * Set database with given name to given JSON object
+	 */
+	set(name, data) {
 		// Schedule the action
 		scheduleAction('set', name, data);
 		// Schedule the load action to reload the database
 		scheduleAction('load');
 	}
-	getDatabase(name) {
+
+	/**
+	 * Return database with provided name, if exist
+	 */
+	get(name) {
 		// Loop through the database and return only the database with the name provided if it exists
 		for (const key in database) {
 			if (key === name) {
@@ -111,8 +138,92 @@ module.exports = class NyaDB {
 			}
 		}
 	}
+
+	/**
+	 * Return an array of all database names
+	 */
+	getList() {
+		return Object.keys(database);
+	}
+
+	// ###### DEPRECATED FUNCTIONS ######
+
+	/**
+	 * Create database with given name, if it doesn't exist
+	 * @deprecated This will be removed in the next major version. Use `.create()` instead.
+	 */
+	createDatabase(name) {
+		if (!warningEmitted.create) {
+			warningEmitted.create = true;
+			console.warn('NyaDB: .createDatabase() is deprecated. Use .create() instead.');
+		}
+
+		// Schedule the action
+		scheduleAction('create', name);
+		// Schedule the load action to reload the database
+		scheduleAction('load');
+	}
+
+	/**
+	 * Delete database with provided name, if exist
+	 * @deprecated This will be removed in the next major version Use `.delete()` instead.
+	 */
+	deleteDatabase(name) {
+		if (!warningEmitted.delete) {
+			warningEmitted.delete = true;
+			console.warn('NyaDB: .deleteDatabase() is deprecated. Use .delete() instead.');
+		}
+
+		// Schedule the action
+		scheduleAction('delete', name);
+		// Schedule the load action to reload the database
+		scheduleAction('load');
+	}
+
+	/**
+	 * Set database with given name to given JSON object
+	 * @deprecated This will be removed in next major version. Use `.set()` instead.
+	 */
+	setDatabase(name, data) {
+		if (!warningEmitted.set) {
+			warningEmitted.set = true;
+			console.warn('NyaDB: .setDatabase() is deprecated. Use .set() instead.');
+		}
+
+		// Schedule the action
+		scheduleAction('set', name, data);
+		// Schedule the load action to reload the database
+		scheduleAction('load');
+	}
+
+	/**
+	 * Return database with provided name, if exist
+	 * @deprecated This will be removed in next major version. Use `.get()` instead.
+	 */
+	getDatabase(name) {
+		if (!warningEmitted.get) {
+			warningEmitted.get = true;
+			console.warn('NyaDB: .getDatabase() is deprecated. Use .get() instead.');
+		}
+
+		// Loop through the database and return only the database with the name provided if it exists
+		for (const key in database) {
+			if (key === name) {
+				return database[key];
+			}
+		}
+	}
+
+	/**
+	 * Return an array of all database names
+	 * @deprecated This will be removed in next major version. Use `.getList()` instead.
+	 */
 	getDatabaseList() {
-		// Return an array of all database names
+		if (!warningEmitted.getList) {
+			warningEmitted.getList = true;
+			console.warn('NyaDB: .getDatabaseList() is deprecated. Use .getList() instead.');
+		}
+
 		return Object.keys(database);
 	}
 };
