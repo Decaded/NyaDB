@@ -6,55 +6,55 @@ const mockDatabase = {
 };
 
 // Create a database called "numbers"
-nyadb.createDatabase('numbers');
+nyadb.create('numbers');
 // insert increasing numbers into the database, one by one
 for (let i = 0; i < 1000; i++) {
 	nya(i);
 }
 
 async function nya(i) {
-	nyadb.setDatabase('numbers', {
+	nyadb.set('numbers', {
 		[i]: i,
 	});
 }
 
 // Create a database called "fruits"
-nyadb.createDatabase('fruits');
+nyadb.create('fruits');
 
 // Insert mock data into the fruits database
-nyadb.setDatabase('fruits', mockDatabase);
+nyadb.set('fruits', mockDatabase);
 
 // Create a database called "deleteMe"
-nyadb.createDatabase('deleteMe');
+nyadb.create('deleteMe');
 
 // Log the contents of the database "numbers" to the console
 console.log('Log "numbers" database');
-console.log(nyadb.getDatabase('numbers'));
+console.log(nyadb.get('numbers'));
 console.log('\n');
 
 // Log all the databases to the console
 console.log('Get database list');
-console.log(nyadb.getDatabaseList());
+console.log(nyadb.getList());
 console.log('\n');
 
 // Log 'fruits' database
 console.log('Log "fruits" database');
-console.log(nyadb.getDatabase('fruits'));
+console.log(nyadb.get('fruits'));
 console.log('\n');
 
 // Log "yellow" key from "fruits" database
 console.log('Log "yellow" key from "fruits" database');
-console.log(nyadb.getDatabase('fruits').yellow);
+console.log(nyadb.get('fruits').yellow);
 console.log('\n');
 
 // Delete the database "deleteMe", then log all the databases to the console again
 console.log('Delete "deleteMe" database');
-nyadb.deleteDatabase('deleteMe');
+nyadb.delete('deleteMe');
 console.log('\n');
 
 // Log all the databases to the console
 console.log('Log all databases');
-console.log(nyadb.getDatabaseList());
+console.log(nyadb.getList());
 console.log('\n');
 
 // Close tests
