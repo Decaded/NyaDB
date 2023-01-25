@@ -12,7 +12,7 @@ All files (databases) will be stored in the `NyaDB` folder in the project's root
 
 # Installation  
   ```sh
-  npm i @decaded/nyadb
+  npm install @decaded/nyadb
   ```
 
 # Usage
@@ -24,7 +24,7 @@ All files (databases) will be stored in the `NyaDB` folder in the project's root
 
 ### Create new database
   ```js
-  nyadb.createDatabase('test'); // Creates a new database called 'test'
+  nyadb.create('test'); // Creates a new database called 'test'
   ```
 
 ### Inserting data
@@ -33,18 +33,28 @@ All files (databases) will be stored in the `NyaDB` folder in the project's root
 	  yellow: ["banana", "citrus"],
 	  red: ["apple", "paprika"],
   };
-  nyadb.setDatabase('test', mockDatabase); // Sets the database 'test' to the mockDatabase object
+  nyadb.set('test', mockDatabase); // Sets the database 'test' to the 'mockDatabase' object
   ```
 
 ### Retrieving data
   ```js 
-  nyadb.getDatabase('test'); // Returns the 'test' database
-  nyadb.getDatabaseList(); // Returns the names of all databases in an array
-  ```
+nyadb.get('test'); // Returns the 'test' database
+
+//  {
+//    "yellow": ["banana", "citrus"],
+//    "red": ["apple", "paprika"],
+//  } 
+```
+
+```js
+nyadb.getList(); // Returns the names of all databases in an array
+
+// ['test']
+```
   
 ### Deleting data
   ```js
-  nyadb.deleteDatabase('test'); // Deletes the database 'test' 
+  nyadb.delete('test'); // Deletes the database 'test' 
   ```
 
 ___
