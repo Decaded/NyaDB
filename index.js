@@ -94,7 +94,6 @@ function scheduler() {
  * nyadb.getDatabaseList(); // Returns an array of all database names in the database.
  * nyadb.getDatabase("test"); // Returns the database object for the database called "test" if it exists.
  * nyadb.deleteDatabase("test"); // Deletes the database called "test" and saves the changes to the file.
- * nyadb.getActionsCounter(); // Returns the actions counter object. This is not saved to the file, so it will always start at zero when you start the program.
  */
 module.exports = class NyaDB {
 	/**
