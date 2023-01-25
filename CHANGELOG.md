@@ -4,6 +4,18 @@ All notable changes to the project will be documented in this file.
 
 ___
 
+## [1.5.0](https://www.npmjs.com/package/@decaded/nyadb/v/1.5.0) (25-01-2023)
+
+* Updated database function names:
+  * .createDatabase()   -> .create()
+  * .deleteDatabase()   -> .delete()
+  * .setDatabase()      -> .set()
+  * .getDatabase()      -> .get()
+  * .getDatabaseList()  -> .getList()
+* Updated [README](https://github.com/Decaded/NyaDB/commit/98d28f57de1adf105c19ee7caec7876378814319)
+* Added deprecation warnings
+___
+
 ## [1.4.2](https://www.npmjs.com/package/@decaded/nyadb/v/1.4.2) (29-12-2022)
 
 * Updated [README](https://github.com/Decaded/NyaDB/commit/18a59db007b9088011b3fd7bf51387c6edd45de2)
