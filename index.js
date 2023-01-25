@@ -81,19 +81,17 @@ function scheduler() {
 }
 
 /**
- * Main NyaDB class that handles all database operations and keeps track of all actions.
+ * Main NyaDB class that handles all database operations.
  * @class
- * @property {object} database - The database object
- * @property {object} actionsCounter - The actions counter object
  *
  * @example
  * const NyaDB = require("nyadb");
  * const nyadb = new NyaDB();
- * nyadb.createDatabase("test"); // Creates a new database called "test" if it doesn't exist and saves it to the file.
- * nyadb.setDatabase("test", {"lorem": {"ipsum": "dolor sit amet"}}); // Sets the database "test" to provided JSON object.
- * nyadb.getDatabaseList(); // Returns an array of all database names in the database.
- * nyadb.getDatabase("test"); // Returns the database object for the database called "test" if it exists.
- * nyadb.deleteDatabase("test"); // Deletes the database called "test" and saves the changes to the file.
+ * nyadb.create("test"); // Creates a new database called "test" if it doesn't exist.
+ * nyadb.set("test", {"lorem": {"ipsum": "dolor sit amet"}}); // Sets the database "test" to provided JSON object.
+ * nyadb.getList(); // Returns an array of all database names in the database.
+ * nyadb.get("test"); // Returns the database object for the database called "test" if it exists.
+ * nyadb.delete("test"); // Deletes the database called "test" if it exist.
  */
 module.exports = class NyaDB {
 	/**
