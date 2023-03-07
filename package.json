@@ -1,6 +1,6 @@
 {
   "name": "@decaded/nyadb",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "Simple JSON \"database\" for NodeJS.",
   "main": "index.js",
   "scripts": {
