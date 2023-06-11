@@ -8,7 +8,7 @@
   },
   "author": {
     "name": "Decaded",
-    "url": "https://decaded.ga"
+    "url": "https://decaded.dev"
   },
   "homepage": "https://github.com/Decaded/NyaDB",
   "repository": {
@@ -27,7 +27,7 @@
     "json-format": "^1.0.1"
   },
   "devDependencies": {
-    "eslint": "^8.30.0"
+    "eslint": "^8.42.0"
   },
   "license": "MIT",
   "typings": "./index.d.ts"
