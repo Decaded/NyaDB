@@ -1,6 +1,6 @@
 {
   "name": "@decaded/nyadb",
-  "version": "1.5.1",
+  "version": "1.6.0",
   "description": "Simple JSON \"database\" for NodeJS.",
   "main": "index.js",
   "scripts": {
@@ -23,6 +23,9 @@
     "database",
     "cache"
   ],
+  "overrides": {
+    "word-wrap": "@aashutoshrathi/word-wrap"
+  },
   "dependencies": {
     "json-format": "^1.0.1"
   },

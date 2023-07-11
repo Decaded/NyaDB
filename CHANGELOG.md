@@ -4,6 +4,14 @@ All notable changes to the project will be documented in this file.
 
 ___
 
+## [1.6.0](https://www.npmjs.com/package/@decaded/nyadb/v/1.6.0) (11-07-2023)
+* [fix: CVE-2023-26115](https://security.snyk.io/vuln/SNYK-JS-WORDWRAP-3149973)
+  * by replacing [word-warp](https://www.npmjs.com/package/word-wrap) unmaintained repo with [word-warp fork by aashutoshrathi](https://github.com/aashutoshrathi/word-wrap)
+___
+
+## [1.5.1](https://www.npmjs.com/package/@decaded/nyadb/v/1.5.1) (11-06-2023)
+* Changed author url to [decaded.dev](https://decaded.dev) in package.json
+___
 ## [1.5.0](https://www.npmjs.com/package/@decaded/nyadb/v/1.5.0) (25-01-2023)
 
 * Updated database function names:
