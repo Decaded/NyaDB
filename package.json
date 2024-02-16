@@ -26,9 +26,6 @@
   "overrides": {
     "word-wrap": "@aashutoshrathi/word-wrap"
   },
-  "dependencies": {
-    "json-format": "^1.0.1"
-  },
   "devDependencies": {
     "eslint": "^8.42.0"
   },

@@ -1,17 +1,9 @@
-const { readFileSync } = require('fs');
+const loadFile = require('./operations/loadFile');
 
 /**
- * Loads database.
- * @returns {object} database - The loaded database
+ * Loads the database.
+ * @returns {object} - The loaded database.
  */
-
 module.exports = function loadDatabase() {
-	// Load the database
-	let database = {};
-	try {
-		database = JSON.parse(readFileSync('./NyaDB/database.json'));
-	} catch (e) {
-		console.log('Error loading database: ' + e);
-	}
-	return database;
+	return loadFile();
 };
