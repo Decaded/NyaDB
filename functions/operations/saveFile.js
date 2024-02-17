@@ -1,4 +1,5 @@
 const { writeFileSync } = require('fs');
+const path = require('path');
 const config = require('../../config/config');
 
 /**
@@ -8,11 +9,14 @@ const config = require('../../config/config');
  */
 module.exports = function saveFile(database) {
 	try {
-		// Convert the database object to a formatted JSON string
-		const jsonString = formatJson(database);
+		// Construct the full file path
+		const fullPath = path.join(config.databaseFolderPath, config.filePath);
 
-		// Save the JSON string to a file
-		writeFileSync(config.databaseFolderPath + config.filePath, jsonString);
+		// Convert the database object to a formatted JSON string
+		const jsonString = JSON.stringify(database, null, '\t');
+
+		// Save the JSON string to the file
+		writeFileSync(fullPath, jsonString);
 
 		// If file writing succeeds, return true
 		return true;
@@ -22,14 +26,3 @@ module.exports = function saveFile(database) {
 		return false;
 	}
 };
-
-/**
- * Formats a JavaScript object as a JSON string with custom indentation.
- * @param {object} obj - The object to be formatted as JSON.
- * @returns {string} - The formatted JSON string.
- */
-function formatJson(obj) {
-	// Convert the object to a JSON string with custom formatting
-	// Using '\t' for tab indentation
-	return JSON.stringify(obj, null, '\t');
-}
