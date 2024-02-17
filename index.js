@@ -1,20 +1,17 @@
-const { writeFileSync, existsSync, mkdirSync } = require('fs');
+/**
+ * Make sure all needed files are there
+ */
+require('./functions/startup/setupDatabase');
 
-// Create "./NyaDB" folder if it doesn't exist
-if (!existsSync('./NyaDB')) {
-	mkdirSync('./NyaDB');
-}
-// Create "./NyaDB/database.json" file if it doesn't exist
-if (!existsSync('./NyaDB/database.json')) {
-	writeFileSync('./NyaDB/database.json', '{}');
-}
-
+/**
+ * Load basic functions
+ */
 const createDatabase = require('./functions/createDatabase');
 const deleteDatabase = require('./functions/deleteDatabase');
 const loadDatabase = require('./functions/loadDatabase');
 const setDatabase = require('./functions/setDatabase');
 
-/*
+/**
  * Array of scheduled actions (load, create, delete, set) and the name of the database to be used in the action (optional)
  * (ex: { action: "create", name: "databaseName", data: "data" })
  */
