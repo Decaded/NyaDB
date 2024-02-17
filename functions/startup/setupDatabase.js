@@ -10,7 +10,6 @@ const config = require('../../config/config');
  * @returns {boolean} - True if the file was created successfully, false otherwise.
  */
 
-console.log('NYA');
 // Create database folder if it doesn't exist
 if (!existsSync(config.databaseFolderPath)) {
 	mkdirSync(config.databaseFolderPath);
