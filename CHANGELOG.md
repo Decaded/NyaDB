@@ -1,7 +1,21 @@
 # Change Log
 
 All notable changes to the project will be documented in this file.
+___
 
+## [2.0](#) (Release Date TBD)
+
+### Added
+
+- Introducing configuration handling:
+  - Added 'config' module for centralized configuration management
+  - Moved creating initial DB files from index.js to separate file (setupDatabase.js)
+  - Created operations (loadFile.js and saveFile.js) to handle file operations
+
+### Removed
+
+- Removed createDatabase, deleteDatabase, setDatabase, getDatabase, and getDatabaseList functions as they were no longer needed and were deprecated in version [1.5.0](#150)
+- Removed dependency on json-format
 ___
 
 ## [1.6.0](https://www.npmjs.com/package/@decaded/nyadb/v/1.6.0) (11-07-2023)
@@ -12,7 +26,7 @@ ___
 ## [1.5.1](https://www.npmjs.com/package/@decaded/nyadb/v/1.5.1) (11-06-2023)
 * Changed author url to [decaded.dev](https://decaded.dev) in package.json
 ___
-## [1.5.0](https://www.npmjs.com/package/@decaded/nyadb/v/1.5.0) (25-01-2023)
+## [1.5.0](https://www.npmjs.com/package/@decaded/nyadb/v/1.5.0) (25-01-2023) <a name="150"></a>
 
 * Updated database function names:
   * .createDatabase()   -> .create()
