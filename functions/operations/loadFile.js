@@ -1,4 +1,5 @@
 const { readFileSync } = require('fs');
+const path = require('path');
 const config = require('../../config/config');
 
 /**
@@ -8,7 +9,9 @@ const config = require('../../config/config');
  */
 module.exports = function loadFile() {
 	try {
-		return JSON.parse(readFileSync(config.databaseFolderPath + config.filePath));
+		const fullPath = path.join(config.databaseFolderPath, config.filePath);
+		const data = readFileSync(fullPath, 'utf8');
+		return JSON.parse(data);
 	} catch (error) {
 		console.error('Error loading file:', error);
 		return {};
