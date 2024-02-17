@@ -1,4 +1,5 @@
 const { writeFileSync } = require('fs');
+const config = require('../../config/config');
 
 /**
  * Saves the database object to a JSON file.
@@ -11,7 +12,7 @@ module.exports = function saveFile(database) {
 		const jsonString = formatJson(database);
 
 		// Save the JSON string to a file
-		writeFileSync('./NyaDB/database.json', jsonString);
+		writeFileSync(config.databaseFolderPath + config.filePath, jsonString);
 
 		// If file writing succeeds, return true
 		return true;

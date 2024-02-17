@@ -1,4 +1,5 @@
 const { readFileSync } = require('fs');
+const config = require('../../config/config');
 
 /**
  * Loads data from a file.
@@ -7,7 +8,7 @@ const { readFileSync } = require('fs');
  */
 module.exports = function loadFile() {
 	try {
-		return JSON.parse(readFileSync('./NyaDB/database.json'));
+		return JSON.parse(readFileSync(config.databaseFolderPath + config.filePath));
 	} catch (error) {
 		console.error('Error loading file:', error);
 		return {};
