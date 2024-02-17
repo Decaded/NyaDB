@@ -29,6 +29,9 @@
   "devDependencies": {
     "eslint": "^8.42.0"
   },
+  "engines": {
+    "node": ">=12.x"
+  },
   "license": "MIT",
   "typings": "./index.d.ts"
 }
