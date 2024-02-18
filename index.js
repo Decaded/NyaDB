@@ -1,10 +1,10 @@
 /**
- * Make sure all needed files are there
+ * Ensure all necessary files are present.
  */
 require('./functions/startup/setupDatabase');
 
 /**
- * Load basic functions
+ * Load basic database functions.
  */
 const createDatabase = require('./functions/createDatabase');
 const deleteDatabase = require('./functions/deleteDatabase');
@@ -12,19 +12,33 @@ const loadDatabase = require('./functions/loadDatabase');
 const setDatabase = require('./functions/setDatabase');
 
 /**
- * Array of scheduled actions (load, create, delete, set) and the name of the database to be used in the action (optional)
- * (ex: { action: "create", name: "databaseName", data: "data" })
+ * Array of scheduled actions (load, create, delete, set) and the name of the database to be used in the action (optional).
+ * @typedef {Object} ScheduledAction
+ * @property {string} action - The action to be performed (create, delete, load, set).
+ * @property {string} [name] - The name of the database to be used in the action (optional).
+ * @property {object} [data] - The data to be used in the action (optional).
  */
+
+/** @type {ScheduledAction[]} */
 const scheduledActions = [];
 
 let database = loadDatabase();
 let isRunning = false;
 
+/**
+ * Schedule a database action for execution.
+ * @param {string} action - The action to be scheduled (create, delete, set).
+ * @param {string} [name] - The name of the database to be used in the action (optional).
+ * @param {object} [data] - The data to be used in the action (optional).
+ */
 async function scheduleAction(action, name, data) {
 	scheduledActions.push({ action, name, data });
 	synchronizedScheduler();
 }
 
+/**
+ * Ensure that database actions are executed sequentially without overlap.
+ */
 function synchronizedScheduler() {
 	if (isRunning) return;
 	if (scheduledActions.length <= 0) return;
@@ -37,12 +51,7 @@ function synchronizedScheduler() {
 }
 
 /**
- * Scheduler for database functions. This is used to prevent corruption of the database.json file.
- * Scheduler calls the appropriate function and ensures that no two functions are called at the same time.
- * Scheduler runs in background every 0.1 seconds and checks if there are any scheduled actions. If there are, it runs the scheduled action.
- * @param {string} action - The action to be scheduled (create, delete, save, load, set)
- * @param {string} name - The name of the database to be used in the action (optional) (ex: "databaseName")
- * @param {object} data - The data to be used in the action (optional) (ex: { key: "value" })
+ * Scheduler for database functions. Prevents corruption of the database.json file by ensuring sequential execution of actions.
  */
 function scheduler() {
 	const action = scheduledActions.shift();
@@ -68,7 +77,6 @@ function scheduler() {
 /**
  * Main NyaDB class that handles all database operations.
  * @class
- *
  * @example
  * const NyaDB = require("nyadb");
  * const nyadb = new NyaDB();
@@ -76,11 +84,12 @@ function scheduler() {
  * nyadb.set("test", {"lorem": {"ipsum": "dolor sit amet"}}); // Sets the database "test" to provided JSON object.
  * nyadb.getList(); // Returns an array of all database names in the database.
  * nyadb.get("test"); // Returns the database object for the database called "test" if it exists.
- * nyadb.delete("test"); // Deletes the database called "test" if it exist.
+ * nyadb.delete("test"); // Deletes the database called "test" if it exists.
  */
 module.exports = class NyaDB {
 	/**
-	 * Create database with given name, if it doesn't exist
+	 * Creates a new database with the given name, if it doesn't already exist.
+	 * @param {string} name - The name of the database to create.
 	 */
 	create(name) {
 		// Schedule the action
@@ -90,7 +99,8 @@ module.exports = class NyaDB {
 	}
 
 	/**
-	 * Delete database with provided name, if exist
+	 * Deletes the database with the provided name, if it exists.
+	 * @param {string} name - The name of the database to delete.
 	 */
 	delete(name) {
 		// Schedule the action
@@ -100,7 +110,9 @@ module.exports = class NyaDB {
 	}
 
 	/**
-	 * Set database with given name to given JSON object
+	 * Sets the database with the given name to the provided JSON object.
+	 * @param {string} name - The name of the database to set.
+	 * @param {object} data - The JSON object to set the database to.
 	 */
 	set(name, data) {
 		// Schedule the action
@@ -110,19 +122,24 @@ module.exports = class NyaDB {
 	}
 
 	/**
-	 * Return database with provided name, if exist
+	 * Returns the database object for the provided name, or false if it doesn't exist.
+	 * @param {string} name - The name of the database to retrieve.
+	 * @returns {object|false} The database object, or false if not found.
 	 */
 	get(name) {
-		// Loop through the database and return only the database with the name provided if it exists
-		for (const key in database) {
-			if (key === name) {
-				return database[key];
-			}
+		// Check if the database with the provided name exists
+		if (database.hasOwnProperty(name)) {
+			// Return the database object if it exists
+			return database[name];
+		} else {
+			// Return false if the database doesn't exist
+			return false;
 		}
 	}
 
 	/**
-	 * Return an array of all database names
+	 * Returns an array of all database names.
+	 * @returns {string[]} An array containing the names of all databases.
 	 */
 	getList() {
 		return Object.keys(database);
