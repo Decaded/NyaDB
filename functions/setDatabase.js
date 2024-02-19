@@ -1,5 +1,5 @@
-const { writeFileSync } = require('fs');
-const jsonFormat = require('json-format');
+const saveFile = require('./operations/saveFile');
+const config = require('../config/config');
 
 /**
  * Updates the database with the new data.
@@ -7,21 +7,13 @@ const jsonFormat = require('json-format');
  * @param {string} name - The name of the database to update
  * @param {object} data - The data to be added to the database
  * @returns {boolean} - Whether or not the database was updated
- *
- * @example
- * updateDatabase(database, "test", {
- *   "test": "test"
- * });
- * // Returns:
- * // {
- * //   "test": "test"
- * // }
  */
-
 module.exports = function updateDatabase(database, name, data) {
 	// Check if the database exists in the database.json file
 	if (!database[name]) {
-		console.log('Database does not exist: ' + name);
+		if (config.enableConsoleLogs) {
+			console.log('NyaDB: Database does not exist:', name);
+		}
 		return false;
 	}
 
@@ -31,12 +23,6 @@ module.exports = function updateDatabase(database, name, data) {
 		...data,
 	};
 
-	// Format the database before saving
-	const formattedDatabase = jsonFormat(database, {
-		type: 'tab',
-	});
-
-	// Save the database
-	writeFileSync('./NyaDB/database.json', formattedDatabase);
-	return true;
+	// Save database
+	saveFile(database);
 };

@@ -1,6 +1,6 @@
 {
   "name": "@decaded/nyadb",
-  "version": "1.6.0",
+  "version": "2.0.0",
   "description": "Simple JSON \"database\" for NodeJS.",
   "main": "index.js",
   "scripts": {
@@ -26,12 +26,19 @@
   "overrides": {
     "word-wrap": "@aashutoshrathi/word-wrap"
   },
-  "dependencies": {
-    "json-format": "^1.0.1"
-  },
   "devDependencies": {
-    "eslint": "^8.42.0"
+    "eslint": "^8.56.0"
+  },
+  "engines": {
+    "node": ">=12.x"
   },
   "license": "MIT",
-  "typings": "./index.d.ts"
+  "typings": "./index.d.ts",
+  "contributors": [
+    {
+      "name": "Celofyz",
+      "url": "https://github.com/Celofyz"
+    }
+  ],
+  "private": false
 }

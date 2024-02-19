@@ -1,62 +1,116 @@
+/* eslint-disable no-inline-comments */
+
 const NyaDB = require('../index');
-const nyadb = new NyaDB();
+const nyadb = new NyaDB({ formattingStyle: 'space', indentSize: 5 });
 const mockDatabase = {
 	yellow: ['banana', 'citrus'],
 	red: ['apple', 'paprika'],
 };
 
-// Create a database called "numbers"
-nyadb.create('numbers');
-// insert increasing numbers into the database, one by one
-for (let i = 0; i < 1000; i++) {
-	nya(i);
+/**
+ * Function to colorize text for console logging.
+ * @param {string} text - The text to colorize.
+ * @param {string} color - The ANSI color code.
+ * @returns {string} - The colorized text.
+ */
+const colorize = (text, color) => `\x1b[${color}m${text}\x1b[0m`;
+
+/**
+ * Creates a new database and logs the action.
+ * @param {string} name - The name of the database to create.
+ */
+function createDatabase(name) {
+	console.log(colorize(`Creating "${name}" database...`, '32')); // Green color
+	nyadb.create(name);
+	console.log(colorize(`"${name}" database created.`, '32')); // Green color
+	console.log('');
 }
 
-async function nya(i) {
-	nyadb.set('numbers', {
-		[i]: i,
-	});
+/**
+ * Inserts data into a database and logs the action.
+ * @param {string} dbName - The name of the database.
+ * @param {any} data - The data to insert into the database.
+ */
+function insertData(dbName, data) {
+	// Loop through the data to be inserted
+	for (const key in data) {
+		if (data.hasOwnProperty(key)) {
+			nyadb.set(dbName, { [key]: data[key] });
+		}
+	}
 }
 
-// Create a database called "fruits"
-nyadb.create('fruits');
+/**
+ * Logs the contents of a database.
+ * @param {string} dbName - The name of the database to log.
+ */
+function logDatabase(dbName) {
+	console.log(colorize(`Logging "${dbName}" database...`, '35')); // Magenta color
+	console.log(nyadb.get(dbName));
+	console.log(colorize(`End of "${dbName}" database log.`, '35')); // Magenta color
+	console.log('');
+}
 
-// Insert mock data into the fruits database
-nyadb.set('fruits', mockDatabase);
+// Function to start the timer
+function startTimer() {
+	return process.hrtime(); // Returns the current high-resolution real time in a [seconds, nanoseconds] tuple Array
+}
 
-// Create a database called "deleteMe"
-nyadb.create('deleteMe');
+// Function to calculate the elapsed time
+function calculateElapsedTime(startTime) {
+	const endTime = process.hrtime(startTime);
+	// Convert the elapsed time to milliseconds
+	const elapsedTimeInMs = endTime[0] * 1000 + endTime[1] / 1000000;
+	return elapsedTimeInMs.toFixed(2);
+}
 
-// Log the contents of the database "numbers" to the console
-console.log('Log "numbers" database');
-console.log(nyadb.get('numbers'));
-console.log('\n');
+// Start the timer
+const startTime = startTimer();
+
+// Create databases
+createDatabase('numbers');
+createDatabase('fruits');
+createDatabase('deleteMe');
+
+// Insert data into the "numbers" and "fruits" databases
+console.log(colorize('Inserting data into "numbers" database...', '33')); // Yellow color
+for (let i = 0; i < 10; i++) {
+	insertData('numbers', { [i]: i });
+}
+console.log(colorize('Numbers inserted into "numbers" database.', '33')); // Yellow color
+console.log('');
+
+console.log(colorize('Inserting data into "fruits" database...', '33')); // Yellow color
+insertData('fruits', mockDatabase);
+console.log(colorize('Mock data inserted into "fruits" database.', '33')); // Yellow color
+console.log('');
+
+// Log database contents
+logDatabase('numbers');
+logDatabase('fruits');
 
 // Log all the databases to the console
-console.log('Get database list');
+console.log(colorize('Logging all databases...', '35')); // Magenta color
 console.log(nyadb.getList());
-console.log('\n');
+console.log(colorize('End of all databases log.', '35')); // Magenta color
+console.log('');
 
-// Log 'fruits' database
-console.log('Log "fruits" database');
-console.log(nyadb.get('fruits'));
-console.log('\n');
-
-// Log "yellow" key from "fruits" database
-console.log('Log "yellow" key from "fruits" database');
-console.log(nyadb.get('fruits').yellow);
-console.log('\n');
-
-// Delete the database "deleteMe", then log all the databases to the console again
-console.log('Delete "deleteMe" database');
+// Delete the "deleteMe" database
+console.log(colorize('Deleting "deleteMe" database...', '31')); // Red color
 nyadb.delete('deleteMe');
-console.log('\n');
+console.log(colorize('"deleteMe" database deleted.', '31')); // Red color
+console.log('');
 
-// Log all the databases to the console
-console.log('Log all databases');
+// Log all the databases to the console again
+console.log(colorize('Logging all databases again...', '35')); // Magenta color
 console.log(nyadb.getList());
-console.log('\n');
+console.log(colorize('End of all databases log.', '35')); // Magenta color
+console.log('');
+
+// Calculate and log the elapsed time
+const elapsedTime = calculateElapsedTime(startTime);
+console.log(colorize(`Tests completed in ${elapsedTime} ms.`, '36')); // Cyan color
 
 // Close tests
-console.log('Done');
+console.log(colorize('Done.', '36')); // Cyan color
 process.exit();
