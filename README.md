@@ -32,6 +32,7 @@ npm install @decaded/nyadb
 const NyaDB = require('@decaded/nyadb');
 const nyadb = new NyaDB();
 ```
+
 You can pass settings on initialization. [More information below.](#configuration-settings).
 
 ### Create new database
@@ -77,13 +78,13 @@ nyadb.delete('test'); // Deletes the database 'test'
 
 Users can customize the behavior of the application by modifying the following settings.
 
-| Setting           | Default Value | Description                                                                  |
-| ----------------- | ------------- | ---------------------------------------------------------------------------- |
-| formattingEnabled | true          | Enable or disable formatting of output.                                      |
-| formattingStyle   | tab           | Choose between using tabs or spaces for indentation.                         |
-| indentSize        | 4             | Specify the number of spaces or tabs for indentation (any positive integer). |
-| encoding          | utf8          | Specify the encoding for file input/output operations.                       |
-| enableConsoleLogs | false         | Enable or disable logging output to the console.                             |
+| Setting           | Default Value | Optional Values                           | Description                                                                                                    |
+| ----------------- | ------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| formattingEnabled | true          | false                                     | Enable or disable formatting of output.                                                                        |
+| formattingStyle   | tab           | space                                     | Choose between using tabs or spaces for indentation.                                                           |
+| indentSize        | 4             | Any positive integer                      | Specify the number of spaces for indentation. Only applicable if `formattingStyle` is set to "space".          |
+| encoding          | utf8          | utf16, utf16le, utf16be, ascii, latin1... | Specify the encoding for file input/output operations. Any encoding supported by Node.js and JSON should work. |
+| enableConsoleLogs | false         | true                                      | Enable or disable logging output to the console. Errors will be logged regardless of this setting.             |
 
 The configuration file is created only after passing the data on initialization, like so:
 
@@ -117,8 +118,7 @@ For example, if you previously used `nyadb.createDatabase('test')`, you should n
 
 ### Deprecation Notice
 
-Please note that the previous method names have been [deprecated since version 1.5.0](changelog.md#150)
-and were removed in 2.0.
+Please note that the previous method names have been [deprecated since version 1.5.0](changelog.md#150) and were removed in 2.0.
 
 ---
 
