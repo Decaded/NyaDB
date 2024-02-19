@@ -38,10 +38,11 @@ function loadJsonFile(filePath) {
 
 // Path to the configuration files
 const defaultConfigPath = path.join(__dirname, 'default.json');
-const customConfigPath = path.join(__dirname, 'custom.json');
 
 // Load default configuration
 const defaultConfig = loadJsonFile(defaultConfigPath);
+
+const customConfigPath = path.join('./', defaultConfig.storage.databaseFolderName, defaultConfig.storage.customConfigFile);
 
 let config = defaultConfig;
 
