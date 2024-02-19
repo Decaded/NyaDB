@@ -9,7 +9,7 @@ const config = require('../../config/config');
  */
 module.exports = function loadFile() {
 	try {
-		const fullPath = path.join(__dirname, '../../', config.storage.databaseFolderName, config.storage.databaseFileName);
+		const fullPath = path.join('./', config.storage.databaseFolderName, config.storage.databaseFileName);
 		const data = readFileSync(fullPath, config.encoding);
 		return JSON.parse(data);
 	} catch (error) {

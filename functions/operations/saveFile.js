@@ -10,7 +10,7 @@ const config = require('../../config/config');
 module.exports = function saveFile(database) {
 	try {
 		// Construct the full file path
-		const fullPath = path.join(__dirname, '../../', config.storage.databaseFolderName, config.storage.databaseFileName);
+		const fullPath = path.join('./', config.storage.databaseFolderName, config.storage.databaseFileName);
 
 		// Check if the database object is empty
 		if (Object.keys(database).length === 0) {
