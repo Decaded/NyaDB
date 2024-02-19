@@ -1,7 +1,7 @@
 /* eslint-disable no-inline-comments */
 
 const NyaDB = require('../index');
-const nyadb = new NyaDB();
+const nyadb = new NyaDB({ formattingStyle: 'space', indentSize: 5 });
 const mockDatabase = {
 	yellow: ['banana', 'citrus'],
 	red: ['apple', 'paprika'],
