@@ -1,9 +1,14 @@
 const loadFile = require('./operations/loadFile');
 
 /**
- * Loads the database.
- * @returns {object} - The loaded database.
+ * Loads the entire database.
+ * @returns {object} - The database object.
  */
 module.exports = function loadDatabase() {
-	return loadFile();
+	try {
+		return loadFile();
+	} catch (error) {
+		console.error('NyaDB: Error loading database:', error);
+		return {};
+	}
 };
