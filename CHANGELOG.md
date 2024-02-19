@@ -9,17 +9,21 @@ All notable changes to the project will be documented in this file.
 ### Added
 
 - Introducing configuration handling:
-  - Added 'config' module for centralized configuration management
-  - Moved creating initial DB files from index.js to separate file (setupDatabase.js)
-  - Created operations (loadFile.js and saveFile.js) to handle file operations
+  - Added `config` module for centralized configuration management
+  - Moved creating initial DB files from `index.js` to separate file (`setupDatabase.js`)
+  - Created operations (`loadFile.js` and `saveFile.js`) to handle file operations
 
 - Enhanced documentation and typings:
   - Improved JSDoc comments for better code documentation
-  - Updated TypeScript declaration file (index.d.ts) to reflect accurate types and structure of the NyaDB class and its methods
+  - Updated TypeScript declaration file (`index.d.ts`) to reflect accurate types and structure of the `NyaDB` class and its methods
+
+- Updated `README` with migration guide:
+  - Added instructions for upgrading from version `1.x` to `2.0`
+  - Included information about method renaming and deprecation notices
 
 ### Removed
 
-- Removed createDatabase, deleteDatabase, setDatabase, getDatabase, and getDatabaseList functions as they were no longer needed and were deprecated in version [1.5.0](#150)
+- Removed `createDatabase`, `deleteDatabase`, `setDatabase`, `getDatabase`, and `getDatabaseList` functions as they were no longer needed and were deprecated in version [1.5.0](#150)
 - Removed dependency on [json-format](https://www.npmjs.com/package/json-format)
 
 ---
