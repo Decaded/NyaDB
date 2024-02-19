@@ -86,7 +86,6 @@ function scheduler() {
 module.exports = class NyaDB {
 	constructor(userConfig) {
 		customConfig(userConfig);
-		console.log(userConfig);
 	}
 
 	/**
