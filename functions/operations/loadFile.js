@@ -10,7 +10,7 @@ const config = require('../../config/config');
 module.exports = function loadFile() {
 	try {
 		const fullPath = path.join(__dirname, '../../', config.storage.databaseFolderName, config.storage.databaseFileName);
-		const data = readFileSync(fullPath, 'utf8');
+		const data = readFileSync(fullPath, config.encoding);
 		return JSON.parse(data);
 	} catch (error) {
 		console.error('NyaDB: Error loading file:', error);
