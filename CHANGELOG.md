@@ -4,7 +4,7 @@ All notable changes to the project will be documented in this file.
 
 ---
 
-## [2.0](#) (Release Date TBD)
+## [2.0.0](https://www.npmjs.com/package/@decaded/nyadb/v/2.0.0) (19-02-2024)
 
 ### Added
 
