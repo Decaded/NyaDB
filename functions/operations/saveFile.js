@@ -10,19 +10,29 @@ const config = require('../../config/config');
 module.exports = function saveFile(database) {
 	try {
 		// Construct the full file path
-		const fullPath = path.join(config.databaseFolderPath, config.filePath);
+		const fullPath = path.join(__dirname, '../../', config.storage.databaseFolderName, config.storage.databaseFileName);
 
-		// Convert the database object to a formatted JSON string
-		const jsonString = JSON.stringify(database, null, '\t');
+		// Check if the database object is empty
+		if (Object.keys(database).length === 0) {
+			if (config.enableConsoleLogs) {
+				console.error('NyaDB: Database object is empty. Nothing to save.');
+			}
+			return false;
+		}
+
+		// Convert the database object to a JSON string
+		const jsonString = config.formattingEnabled
+			? JSON.stringify(database, null, config.formattingStyle === 'space' ? ' '.repeat(config.indentSize) : '\t')
+			: JSON.stringify(database);
 
 		// Save the JSON string to the file
-		writeFileSync(fullPath, jsonString);
+		writeFileSync(fullPath, jsonString, { encoding: config.encoding });
 
 		// If file writing succeeds, return true
 		return true;
 	} catch (error) {
 		// If an error occurs during file writing, log the error and return false
-		console.error('Error saving file:', error);
+		console.error('NyaDB: Error saving file:', error);
 		return false;
 	}
 };
