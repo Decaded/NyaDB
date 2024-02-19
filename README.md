@@ -118,7 +118,7 @@ For example, if you previously used `nyadb.createDatabase('test')`, you should n
 
 ### Deprecation Notice
 
-Please note that the previous method names have been [deprecated since version 1.5.0](changelog.md#150) and were removed in 2.0.
+Please note that the previous method names have been [deprecated since version 1.5.0](CHANGELOG.md#150) and were removed in 2.0.
 
 ---
 
