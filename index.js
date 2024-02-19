@@ -2,6 +2,7 @@
  * Ensure all necessary files are present.
  */
 require('./functions/startup/setupDatabase');
+const customConfig = require('./config/customConfig');
 
 /**
  * Load basic database functions.
@@ -17,9 +18,8 @@ const setDatabase = require('./functions/setDatabase');
  * @property {string} action - The action to be performed (create, delete, load, set).
  * @property {string} [name] - The name of the database to be used in the action (optional).
  * @property {object} [data] - The data to be used in the action (optional).
+ * @type {ScheduledAction[]}
  */
-
-/** @type {ScheduledAction[]} */
 const scheduledActions = [];
 
 let database = loadDatabase();
@@ -40,14 +40,11 @@ async function scheduleAction(action, name, data) {
  * Ensure that database actions are executed sequentially without overlap.
  */
 function synchronizedScheduler() {
-	if (isRunning) return;
-	if (scheduledActions.length <= 0) return;
-
-	isRunning = true;
-	scheduler();
-	isRunning = false;
-
-	synchronizedScheduler();
+	while (!isRunning && scheduledActions.length > 0) {
+		isRunning = true;
+		scheduler();
+		isRunning = false;
+	}
 }
 
 /**
@@ -87,6 +84,11 @@ function scheduler() {
  * nyadb.delete("test"); // Deletes the database called "test" if it exists.
  */
 module.exports = class NyaDB {
+	constructor(userConfig) {
+		customConfig(userConfig);
+		console.log(userConfig);
+	}
+
 	/**
 	 * Creates a new database with the given name, if it doesn't already exist.
 	 * @param {string} name - The name of the database to create.
