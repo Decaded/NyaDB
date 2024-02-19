@@ -76,7 +76,7 @@ nyadb.delete('test'); // Deletes the database 'test'
 
 ## Configuration Settings <a name="configuration-settings"></a>
 
-Users can customize the behavior of the application by modifying the following settings.
+You can customize the behavior of the application by modifying the following settings.
 
 | Setting           | Default Value | Optional Values                           | Description                                                                                                    |
 | ----------------- | ------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
@@ -94,7 +94,7 @@ const nyadb = new NyaDB({ formattingStyle: 'space', indentSize: 5 });
 
 ### Note:
 
-- Changes to these settings will only take effect after restarting the application.
+- Changes to these settings will only take effect after restarting the application, so on the first run it will still have default settings.
 - The JSON file containing these settings is located in the `NyaDB` folder in the project's root directory and by default is named `customDatabaseConfiguration.json`.
 - To return to the default configuration values, simply remove custom settings from the initialization.
 
@@ -116,12 +116,23 @@ In version 2.0, some method names have been updated for consistency and clarity.
 
 For example, if you previously used `nyadb.createDatabase('test')`, you should now use `nyadb.create('test')`.
 
+### Passing Arguments
+
+Passing arguments on initialization is completely optional and compatible with version 1.x, meaning if you initialized it like this:
+
+```js
+const NyaDB = require('@decaded/nyadb');
+const nyadb = new NyaDB();
+```
+
+it will still work in version 2.0 the same way as it did before. Just make sure you updated your methods as shown above.
+
 ### Deprecation Notice
 
 Please note that the previous method names have been [deprecated since version 1.5.0](CHANGELOG.md#150) and were removed in 2.0.
 
 ---
 
-### Like what i do?
+# Like what i do?
 
 <a href='https://ko-fi.com/decaded' target='_blank'><img height='30' style='border:0px;height:40px;' src='https://az743702.vo.msecnd.net/cdn/kofi3.png?v=0' border='0' alt='Buy Me a Coffee at ko-fi.com' />
