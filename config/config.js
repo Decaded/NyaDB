@@ -42,11 +42,10 @@ const defaultConfigPath = path.join(__dirname, 'default.json');
 // Load default configuration
 const defaultConfig = loadJsonFile(defaultConfigPath);
 
-const customConfigPath = path.join('./', defaultConfig.storage.databaseFolderName, defaultConfig.storage.customConfigFile);
-
 let config = defaultConfig;
 
 // Check if custom.json exists and merge configurations if available
+const customConfigPath = path.join('./', defaultConfig.storage.databaseFolderName, 'custom.json');
 if (existsSync(customConfigPath)) {
 	const customConfig = loadJsonFile(customConfigPath);
 	config = mergeConfigs(defaultConfig, customConfig);

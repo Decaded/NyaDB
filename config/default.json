@@ -2,8 +2,7 @@
   "storage": {
     "databaseFolderName": "NyaDB",
     "databaseFileName": "database.json",
-    "content": "{}",
-    "customConfigFile": "customDatabaseConfiguration.json"
+    "content": "{}"
   },
   "formattingEnabled": true,
   "formattingStyle": "tab",

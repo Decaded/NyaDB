@@ -1,6 +1,7 @@
 const { readFileSync } = require('fs');
 const path = require('path');
 const config = require('../../config/config');
+const log = require('../logs/logger');
 
 /**
  * Loads data from a file.
@@ -11,9 +12,10 @@ module.exports = function loadFile() {
 	try {
 		const fullPath = path.join('./', config.storage.databaseFolderName, config.storage.databaseFileName);
 		const data = readFileSync(fullPath, config.encoding);
+		log('Load File', 'File loaded successfully', fullPath);
 		return JSON.parse(data);
 	} catch (error) {
-		console.error('NyaDB: Error loading file:', error);
+		log('Error', 'Loading file:', error);
 		process.exit();
 	}
 };

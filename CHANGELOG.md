@@ -4,6 +4,33 @@ All notable changes to the project will be documented in this file.
 
 ---
 
+## [3.0.0](https://www.npmjs.com/package/@decaded/nyadb/v/3.0.0) (31-05-2024)
+
+### Added
+
+- **Dynamic Configuration**:
+  - Added dynamic configuration functionality.
+
+- **Configuration Validation**:
+  - Implemented robust validation for configuration settings to enforce expected formats and values.
+  - Enhanced error handling for configuration-related errors.
+  - ⚠ This is a possible breaking change necessitating the major version update to 3.
+
+- **Logging Enhancements**:
+  - Improved logging functionality to support dynamic configurations and provide more detailed log messages.
+  - Added support for logging database operations with timestamps and action types.
+
+- **Documentation and Typings**:
+  - Updated JSDoc comments for better code documentation.
+  - Improved README with updated usage instructions and configuration settings.
+
+
+### Removed
+
+- Removed unnecessary `customConfigFile` setting as dynamic configuration handling was implemented.
+
+---
+
 ## [2.0.0](https://www.npmjs.com/package/@decaded/nyadb/v/2.0.0) (19-02-2024)
 
 ### Added

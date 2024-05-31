@@ -3,31 +3,34 @@
  */
 declare class NyaDB {
     /**
+     * Constructs the NyaDB instance and applies the user configuration.
+     * @param {object} userConfig - User configuration to override the default settings.
+     */
+    constructor(userConfig?: object);
+
+    /**
      * Creates a new database with the given name, if it doesn't already exist.
      * @param {string} name - The name of the database to create.
-     * @returns {boolean} - Whether or not the database was created successfully.
      */
-    create(name: string): boolean;
+    create(name: string): void;
 
     /**
      * Deletes the database with the provided name, if it exists.
      * @param {string} name - The name of the database to delete.
-     * @returns {boolean} - Whether or not the database was deleted successfully.
      */
-    delete(name: string): boolean;
+    delete(name: string): void;
 
     /**
      * Sets the database with the given name to the provided JSON object.
      * @param {string} name - The name of the database to set.
      * @param {object} data - The JSON object to set the database to.
-     * @returns {boolean} - Whether or not the database was set successfully.
      */
-    set(name: string, data: object): boolean;
+    set(name: string, data: object): void;
 
     /**
      * Returns the database object for the provided name, or false if it doesn't exist.
      * @param {string} name - The name of the database to retrieve.
-     * @returns {object|false} - The database object, or false if not found.
+     * @returns {object | false} - The database object, or false if not found.
      */
     get(name: string): object | false;
 
