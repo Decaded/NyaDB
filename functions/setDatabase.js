@@ -1,5 +1,5 @@
 const saveFile = require('./operations/saveFile');
-const config = require('../config/config');
+const log = require('./logs/logger');
 
 /**
  * Updates the database with the new data.
@@ -8,21 +8,18 @@ const config = require('../config/config');
  * @param {object} data - The data to be added to the database
  * @returns {boolean} - Whether or not the database was updated
  */
-module.exports = function updateDatabase(database, name, data) {
-	// Check if the database exists in the database.json file
+module.exports = function setDatabase(database, name, data) {
 	if (!database[name]) {
-		if (config.enableConsoleLogs) {
-			console.log('NyaDB: Database does not exist:', name);
-		}
+		log('Set Database', 'Database does not exist:', name);
 		return false;
 	}
 
-	// Update the corresponding entry in the database
 	database[name] = {
 		...database[name],
 		...data,
 	};
 
-	// Save database
 	saveFile(database);
+	log('Set Database', 'Database updated:', name, data);
+	return true;
 };

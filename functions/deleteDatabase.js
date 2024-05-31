@@ -1,6 +1,6 @@
 const saveFile = require('./operations/saveFile');
 const loadFile = require('./operations/loadFile');
-const config = require('../config/config');
+const log = require('./logs/logger');
 
 /**
  * Deletes a database.
@@ -11,20 +11,17 @@ module.exports = function deleteDatabase(name) {
 	try {
 		const database = loadFile();
 		if (!database[name]) {
-			if (config.enableConsoleLogs) {
-				console.log('NyaDB: Database does not exist:', name);
-			}
+			log('Delete Database', 'Database does not exist:', name);
 			return false;
 		}
 
 		delete database[name];
 
-		// Save the updated database
 		saveFile(database);
-
+		log('Delete Database', 'Database deleted:', name);
 		return true;
 	} catch (error) {
-		console.error('NyaDB: Error deleting database:', error);
+		log('Error', 'Deleting database:', error);
 		return false;
 	}
 };

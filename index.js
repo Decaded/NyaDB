@@ -3,6 +3,7 @@
  */
 require('./functions/startup/setupDatabase');
 const customConfig = require('./config/customConfig');
+const log = require('./functions/logs/logger');
 
 /**
  * Load basic database functions.
@@ -18,7 +19,6 @@ const setDatabase = require('./functions/setDatabase');
  * @property {string} action - The action to be performed (create, delete, load, set).
  * @property {string} [name] - The name of the database to be used in the action (optional).
  * @property {object} [data] - The data to be used in the action (optional).
- * @type {ScheduledAction[]}
  */
 const scheduledActions = [];
 
@@ -52,6 +52,7 @@ function synchronizedScheduler() {
  */
 function scheduler() {
 	const action = scheduledActions.shift();
+	log('Action Scheduled', action.action, action.name, action.data);
 	switch (action.action) {
 		case 'create':
 			createDatabase(action.name);
@@ -66,7 +67,7 @@ function scheduler() {
 			setDatabase(database, action.name, action.data);
 			break;
 		default:
-			console.log('Error: Unknown action: ' + action.action);
+			log('Error', 'Unknown action:', action.action);
 			break;
 	}
 }
@@ -84,8 +85,13 @@ function scheduler() {
  * nyadb.delete("test"); // Deletes the database called "test" if it exists.
  */
 module.exports = class NyaDB {
+	/**
+	 * Constructs the NyaDB instance and applies the user configuration.
+	 * @param {object} userConfig - User configuration to override the default settings.
+	 */
 	constructor(userConfig) {
 		customConfig(userConfig);
+		log('NyaDB Initialized', userConfig);
 	}
 
 	/**
@@ -93,9 +99,7 @@ module.exports = class NyaDB {
 	 * @param {string} name - The name of the database to create.
 	 */
 	create(name) {
-		// Schedule the action
 		scheduleAction('create', name);
-		// Schedule the load action to reload the database
 		scheduleAction('load');
 	}
 
@@ -104,9 +108,7 @@ module.exports = class NyaDB {
 	 * @param {string} name - The name of the database to delete.
 	 */
 	delete(name) {
-		// Schedule the action
 		scheduleAction('delete', name);
-		// Schedule the load action to reload the database
 		scheduleAction('load');
 	}
 
@@ -116,9 +118,7 @@ module.exports = class NyaDB {
 	 * @param {object} data - The JSON object to set the database to.
 	 */
 	set(name, data) {
-		// Schedule the action
 		scheduleAction('set', name, data);
-		// Schedule the load action to reload the database
 		scheduleAction('load');
 	}
 
@@ -128,12 +128,9 @@ module.exports = class NyaDB {
 	 * @returns {object|false} The database object, or false if not found.
 	 */
 	get(name) {
-		// Check if the database with the provided name exists
 		if (database.hasOwnProperty(name)) {
-			// Return the database object if it exists
 			return database[name];
 		} else {
-			// Return false if the database doesn't exist
 			return false;
 		}
 	}

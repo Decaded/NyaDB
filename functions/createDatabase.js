@@ -1,6 +1,6 @@
 const saveFile = require('./operations/saveFile');
 const loadFile = require('./operations/loadFile');
-const config = require('../config/config');
+const log = require('./logs/logger');
 
 /**
  * Creates a new database.
@@ -11,20 +11,17 @@ module.exports = function createDatabase(name) {
 	try {
 		const database = loadFile();
 		if (database[name]) {
-			if (config.enableConsoleLogs) {
-				console.log('NyaDB: Database already exists:', name);
-			}
+			log('Create Database', 'Database already exists:', name);
 			return false;
 		}
 
 		database[name] = {};
 
-		// Save the database
 		saveFile(database);
-
+		log('Create Database', 'Database created:', name);
 		return true;
 	} catch (error) {
-		console.error('NyaDB: Error creating database:', error);
+		log('Error', 'Creating database:', error);
 		return false;
 	}
 };
