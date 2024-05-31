@@ -27,7 +27,6 @@
     "word-wrap": "@aashutoshrathi/word-wrap"
   },
   "devDependencies": {
-    "assert": "^2.1.0",
     "eslint": "^9.3.0"
   },
   "engines": {
