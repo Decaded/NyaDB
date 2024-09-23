@@ -18,13 +18,13 @@ All files will be stored in the `NyaDB` folder in the project's root directory.
 
 This package requires Node.js version 12.x or higher for compatibility with the features and syntax used in the codebase.
 
-# Installation
+## Installation
 
 ```sh
 npm install @decaded/nyadb
 ```
 
-# Usage
+## Usage
 
 ### Initialize
 
@@ -45,8 +45,8 @@ nyadb.create('test'); // Creates a new database called 'test'
 
 ```js
 const mockDatabase = {
-	yellow: ['banana', 'citrus'],
-	red: ['apple', 'paprika'],
+ yellow: ['banana', 'citrus'],
+ red: ['apple', 'paprika'],
 };
 nyadb.set('test', mockDatabase); // Sets the database 'test' to the 'mockDatabase' object
 ```
@@ -74,7 +74,7 @@ nyadb.getList(); // Returns the names of all databases in an array
 nyadb.delete('test'); // Deletes the database 'test'
 ```
 
-## Configuration Settings <a name="configuration-settings"></a>
+## Configuration Settings
 
 You can customize the behavior of the application by modifying the following settings.
 
@@ -86,13 +86,13 @@ You can customize the behavior of the application by modifying the following set
 | encoding          | utf8          | Any valid encoding supported by Node.js | Specify the encoding for file input/output operations.                                                |
 | enableConsoleLogs | false         | true                                    | Enable or disable logging output to the console. Errors will be logged regardless of this setting.    |
 
-### Example:
+### Example
 
 ```js
 const nyadb = new NyaDB({ formattingStyle: 'space', indentSize: 5 });
 ```
 
-### Note:
+### Note
 
 - Changes to these settings will take effect immediately on initialization.
 - To return to the default values, simply remove the setting.
@@ -103,7 +103,8 @@ const nyadb = new NyaDB({ formattingStyle: 'space', indentSize: 5 });
 
 NyaDB version 3 is fully compatible with databases created using version 2.x. and 1.x. No data migration is required when upgrading to version 3.
 
-⚠ NyaDB version 3 introduces strict procedures for handling [configuration settings](#configuration-settings). If you use them, make sure you pass the correct values ​​listed in the table.
+⚠ NyaDB version 3 introduces strict procedures for handling [configuration settings](#configuration-settings). If you use them, make sure you pass the correct values ​​listed in
+the table.
 
 ⚠ If you are migrating from 1.x, make sure to update your methods as listed below.
 
@@ -134,8 +135,14 @@ It will still work in version 3.0 the same way as it did before. Just make sure 
 
 Please note that the previous method names have been [deprecated since version 1.5.0](CHANGELOG.md#150) and were removed in 2.0.
 
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
 ---
 
-# Like what I do?
+## Like what I do?
 
-<a href='https://ko-fi.com/decaded' target='_blank'><img height='30' style='border:0px;height:40px;' src='https://az743702.vo.msecnd.net/cdn/kofi3.png?v=0' border='0' alt='Buy Me a Coffee at ko-fi.com' />
+If you find this project helpful or fun to use, consider supporting me on Ko-fi! Your support helps me keep creating and improving.
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/L3L02XV6J)
