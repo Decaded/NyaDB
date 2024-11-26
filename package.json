@@ -6,9 +6,10 @@
   "scripts": {
     "test": "node tests/tests.js"
   },
-  "author": {
-    "name": "Decaded",
-    "url": "https://decaded.dev"
+  "author": "Decaded (https://decaded.dev)",
+  "funding": {
+    "type": "ko-fi",
+    "url": "https://ko-fi.com/decaded"
   },
   "homepage": "https://github.com/Decaded/NyaDB#readme",
   "repository": {
