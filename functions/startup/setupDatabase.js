@@ -1,9 +1,9 @@
-const { existsSync, mkdirSync, writeFileSync } = require('fs');
+const { existsSync, mkdirSync } = require('fs');
 const config = require('../../config/config');
 const log = require('../logs/logger');
+const migrateOldData = require('./migrateOldData');
 
 const databaseFolderPath = `./${config.storage.databaseFolderName}`;
-const databaseFilePath = `/${config.storage.databaseFileName}`;
 
 try {
 	// Create database folder if it doesn't exist
@@ -11,10 +11,12 @@ try {
 		mkdirSync(databaseFolderPath);
 		log('Setup Database', 'Database folder created:', databaseFolderPath);
 	}
-	// Create database file if it doesn't exist
-	if (!existsSync(databaseFolderPath + databaseFilePath)) {
-		writeFileSync(databaseFolderPath + databaseFilePath, config.storage.content);
-		log('Setup Database', 'Database file created:', databaseFolderPath + databaseFilePath);
+
+	// Migrate old data if necessary
+	const migrationSuccess = migrateOldData();
+	if (!migrationSuccess) {
+		log('Error', 'Database initialization halted due to migration failure.');
+		process.exit(1); // Halt initialization if migration fails
 	}
 } catch (error) {
 	log('Error', 'Setting up database:', error);

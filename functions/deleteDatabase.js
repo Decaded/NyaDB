@@ -1,5 +1,6 @@
-const saveFile = require('./operations/saveFile');
-const loadFile = require('./operations/loadFile');
+const { unlinkSync, existsSync } = require('fs');
+const path = require('path');
+const config = require('../config/config');
 const log = require('./logs/logger');
 
 /**
@@ -9,15 +10,13 @@ const log = require('./logs/logger');
  */
 module.exports = function deleteDatabase(name) {
 	try {
-		const database = loadFile();
-		if (!database[name]) {
+		const fullPath = path.join('./', config.storage.databaseFolderName, `${name}.json`);
+		if (!existsSync(fullPath)) {
 			log('Delete Database', 'Database does not exist:', name);
 			return false;
 		}
 
-		delete database[name];
-
-		saveFile(database);
+		unlinkSync(fullPath);
 		log('Delete Database', 'Database deleted:', name);
 		return true;
 	} catch (error) {

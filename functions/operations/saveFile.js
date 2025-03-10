@@ -6,16 +6,12 @@ const log = require('../logs/logger');
 /**
  * Saves the database object to a JSON file.
  * @param {object} database - The database object to be saved.
+ * @param {string} dbName - The name of the database to be saved.
  * @returns {boolean} - Returns true if the database was saved successfully, false otherwise.
  */
-module.exports = function saveFile(database) {
+module.exports = function saveFile(database, dbName) {
 	try {
-		const fullPath = path.join('./', config.storage.databaseFolderName, config.storage.databaseFileName);
-
-		if (Object.keys(database).length === 0) {
-			log('Error', 'Database object is empty. Nothing to save.');
-			return false;
-		}
+		const fullPath = path.join('./', config.storage.databaseFolderName, `${dbName}.json`);
 
 		const jsonString = config.formattingEnabled
 			? JSON.stringify(database, null, config.formattingStyle === 'space' ? ' '.repeat(config.indentSize) : '\t')

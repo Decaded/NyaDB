@@ -19,7 +19,7 @@ module.exports = function setDatabase(database, name, data) {
 		...data,
 	};
 
-	saveFile(database);
+	saveFile(database[name], name);
 	log('Set Database', 'Database updated:', name, data);
 	return true;
 };

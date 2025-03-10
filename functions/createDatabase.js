@@ -16,8 +16,7 @@ module.exports = function createDatabase(name) {
 		}
 
 		database[name] = {};
-
-		saveFile(database);
+		saveFile(database[name], name);
 		log('Create Database', 'Database created:', name);
 		return true;
 	} catch (error) {
