@@ -4,26 +4,48 @@ All notable changes to the project will be documented in this file.
 
 ---
 
+## [4.0.0](https://www.npmjs.com/package/@decaded/nyadb/v/4.0.0) (10-03-2025)
+
+### Changed
+
+- **Multi-file storage system:**
+
+  - Each database is now stored as a separate JSON file (`databaseName.json`) instead of a single `database.json` file.
+  - This improves data isolation, reduces unnecessary file writes, and allows more efficient updates.
+
+- **Automated Migration from v3.x:**
+  - If an existing `database.json` is detected, NyaDB will **automatically split** it into multiple files, maintaining the original structure.
+  - The old `database.json` will be **backed up** as `database_backup.json` in the `NyaDB` folder.
+
+### Removed
+
+- **Deprecated `database.json`:**
+  - All operations now target individual database files instead of a centralized JSON file.
+
+---
+
 ## [3.0.0](https://www.npmjs.com/package/@decaded/nyadb/v/3.0.0) (31-05-2024)
 
 ### Added
 
 - **Dynamic Configuration**:
+
   - Added dynamic configuration functionality.
 
 - **Configuration Validation**:
+
   - Implemented robust validation for configuration settings to enforce expected formats and values.
   - Enhanced error handling for configuration-related errors.
   - ⚠ This is a possible breaking change necessitating the major version update to 3.
 
 - **Logging Enhancements**:
+
   - Improved logging functionality to support dynamic configurations and provide more detailed log messages.
   - Added support for logging database operations with timestamps and action types.
 
 - **Documentation and Typings**:
   - Updated JSDoc comments for better code documentation.
   - Improved README with updated usage instructions and configuration settings.
-
 
 ### Removed
 
@@ -36,11 +58,13 @@ All notable changes to the project will be documented in this file.
 ### Added
 
 - Introducing configuration handling:
+
   - Added `config` module for centralized configuration management
   - Moved creating initial DB files from `index.js` to separate file (`setupDatabase.js`)
   - Created operations (`loadFile.js` and `saveFile.js`) to handle file operations
 
 - Enhanced documentation and typings:
+
   - Improved JSDoc comments for better code documentation
   - Updated TypeScript declaration file (`index.d.ts`) to reflect accurate types and structure of the `NyaDB` class and its methods
 
@@ -50,7 +74,8 @@ All notable changes to the project will be documented in this file.
 
 ### Removed
 
-- Removed `createDatabase`, `deleteDatabase`, `setDatabase`, `getDatabase`, and `getDatabaseList` functions as they were no longer needed and were deprecated in version [1.5.0](#150)
+- Removed `createDatabase`, `deleteDatabase`, `setDatabase`, `getDatabase`, and `getDatabaseList` functions as they were no longer needed and were deprecated in version
+  [1.5.0](#150)
 - Removed dependency on [json-format](https://www.npmjs.com/package/json-format)
 
 ---

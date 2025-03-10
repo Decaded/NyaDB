@@ -10,7 +10,7 @@ Simple JSON "database" for NodeJS.
 
 ---
 
-All files will be stored in the `NyaDB` folder in the project's root directory.
+All databases are stored as **separate JSON files** in the `NyaDB` folder in the project's root directory.
 
 ---
 
@@ -38,17 +38,17 @@ You can pass settings on initialization. [More information below](#configuration
 ### Create new database
 
 ```js
-nyadb.create('test'); // Creates a new database called 'test'
+nyadb.create('test'); // Creates a new database called 'test.json'
 ```
 
 ### Inserting data
 
 ```js
 const mockDatabase = {
- yellow: ['banana', 'citrus'],
- red: ['apple', 'paprika'],
+	yellow: ['banana', 'citrus'],
+	red: ['apple', 'paprika'],
 };
-nyadb.set('test', mockDatabase); // Sets the database 'test' to the 'mockDatabase' object
+nyadb.set('test', mockDatabase); // Saves data in 'test.json'
 ```
 
 ### Retrieving data
@@ -71,7 +71,7 @@ nyadb.getList(); // Returns the names of all databases in an array
 ### Deleting data
 
 ```js
-nyadb.delete('test'); // Deletes the database 'test'
+nyadb.delete('test'); // Deletes 'test.json'
 ```
 
 ## Configuration Settings
@@ -101,39 +101,11 @@ const nyadb = new NyaDB({ formattingStyle: 'space', indentSize: 5 });
 
 ### Compatibility with previous versions
 
-NyaDB version 3 is fully compatible with databases created using version 2.x. and 1.x. No data migration is required when upgrading to version 3.
+NyaDB version 4 transitions from a single-file database structure (`database.json`) to a multi-file storage system, where each database is stored as its own JSON file.
 
-⚠ NyaDB version 3 introduces strict procedures for handling [configuration settings](#configuration-settings). If you use them, make sure you pass the correct values ​​listed in
-the table.
-
-⚠ If you are migrating from 1.x, make sure to update your methods as listed below.
-
-### Method Renaming
-
-In version 2.0, some method names were updated for consistency and clarity. Here’s a quick guide on how to update your code:
-
-- `createDatabase()` is now `create()`
-- `deleteDatabase()` is now `delete()`
-- `setDatabase()` is now `set()`
-- `getDatabase()` is now `get()`
-- `getDatabaseList()` is now `getList()`
-
-For example, if you previously used `nyadb.createDatabase('test')`, you should now use `nyadb.create('test')`.
-
-### Passing Arguments
-
-Passing arguments on initialization is optional and compatible with version 1.x and 2.x, meaning if you initialized it like this:
-
-```js
-const NyaDB = require('@decaded/nyadb');
-const nyadb = new NyaDB();
-```
-
-It will still work in version 3.0 the same way as it did before. Just make sure you updated your methods as shown above if you are migrating from version 1.x.
-
-### Deprecation Notice
-
-Please note that the previous method names have been [deprecated since version 1.5.0](CHANGELOG.md#150) and were removed in 2.0.
+| ⚠   | **If migrating from version 3.x or earlier**, the system will **automatically detect** an existing `database.json` file and split it into multiple files.                                                                        |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ⚠   | **This migration is one-way and cannot be reversed. The original `database.json` file will be backed up as `database_backup.json` in the `NyaDB` folder. However, it's recommended to create your own backup before upgrading.** |
 
 ## License
 
