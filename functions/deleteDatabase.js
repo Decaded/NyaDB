@@ -2,6 +2,7 @@ const { unlinkSync, existsSync } = require('fs');
 const path = require('path');
 const config = require('../config/config');
 const log = require('./logs/logger');
+const { validateDatabaseName } = require('./validation/validateInput');
 
 /**
  * Deletes a database.
@@ -10,6 +11,10 @@ const log = require('./logs/logger');
  */
 module.exports = function deleteDatabase(name) {
 	try {
+		if (config.validateInput === true) {
+			validateDatabaseName(name);
+		}
+
 		const fullPath = path.join('./', config.storage.databaseFolderName, `${name}.json`);
 		if (!existsSync(fullPath)) {
 			log('Delete Database', 'Database does not exist:', name);
@@ -20,7 +25,7 @@ module.exports = function deleteDatabase(name) {
 		log('Delete Database', 'Database deleted:', name);
 		return true;
 	} catch (error) {
-		log('Error', 'Deleting database:', error);
+		log('Error', 'Deleting database:', error.message || error);
 		return false;
 	}
 };

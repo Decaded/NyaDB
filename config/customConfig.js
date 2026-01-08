@@ -28,6 +28,11 @@ function validateConfig(data) {
 		indentSize: { type: 'number', minimum: 0 },
 		encoding: { type: 'string' },
 		enableConsoleLogs: { type: 'boolean' },
+		validateInput: { type: 'boolean' },
+		useAtomicWrites: { type: 'boolean' },
+		maxFileSize: { type: 'number', minimum: 1 },
+		writeDebounce: { type: 'number', minimum: 0 },
+		logLevel: { type: 'string', enum: ['error', 'warn', 'info', 'debug'] },
 	};
 
 	for (const key in data) {
@@ -49,6 +54,10 @@ function validateConfig(data) {
 
 			if (minimum !== undefined && value < minimum) {
 				throw new Error(`Invalid configuration: ${key} should be greater than or equal to ${minimum}.`);
+			}
+
+			if (data.useAtomicWrites === true && data.validateInput !== true) {
+				throw new Error('Invalid configuration: useAtomicWrites requires validateInput to be enabled.');
 			}
 		}
 	}

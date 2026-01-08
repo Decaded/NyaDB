@@ -4,6 +4,110 @@ All notable changes to the project will be documented in this file.
 
 ---
 
+## [5.0.0](https://www.npmjs.com/package/@decaded/nyadb/v/5.0.0) (TBD)
+
+### ⚠ Breaking Changes
+
+- **Input validation enabled by default:**
+
+  - `validateInput` defaults to `true`
+  - Database names are validated for security by default
+  - Prevents path traversal attempts and invalid characters
+  - To disable validation (not recommended), explicitly set `validateInput: false`
+
+- **Atomic writes enabled by default:**
+  - `useAtomicWrites` defaults to `true`
+  - Uses temporary file + rename pattern for safer write operations
+  - Prevents data corruption during write operations
+  - Requires `validateInput: true` (throws error if not met)
+
+### Added
+
+- **Atomic file operations:**
+
+  - Implemented atomic writes using temporary file + rename pattern
+  - Prevents data corruption during write operations
+  - Requires `validateInput: true` to enable
+  - Configurable via `useAtomicWrites` setting (default: true)
+
+- **Input validation:**
+
+  - Database names are validated for security
+  - Prevents path traversal attempts and invalid characters
+  - Configurable via `validateInput` setting (default: true)
+
+- **Write debouncing:**
+
+  - Automatic batching of rapid write operations
+  - Configurable delay via `writeDebounce` setting (default: 10ms)
+  - Improves performance for applications with frequent updates
+
+- **File size limits:**
+
+  - Added `maxFileSize` configuration setting (default: 100MB)
+  - Prevents memory issues with large datasets
+  - Warning at 80% of limit
+  - Grace threshold at 99% of limit
+  - Hard block at or above 100% of limit with critical error that shuts down application to prevent data loss
+
+- **Enhanced logging:**
+
+  - Added log levels: error, warn, info, debug
+  - Configurable via `logLevel` setting (default: 'warn')
+  - Errors are now logged based on logLevel setting
+  - Critical errors bypass all settings and shut down the application with extensive error messages
+
+- **Database size monitoring:**
+
+  - Added `size` method to retrieve the size of a database
+  - Supports getting sizes of a specified database, multiple specified databases, or all existing databases
+  - Returns detailed size information including byte count and formatted size
+
+- **`exists()` method:**
+
+  - Check if a database exists without loading its data
+  - Returns `true` if database exists, `false` otherwise
+  - Example: `nyadb.exists('users')`
+
+- **`clear()` method:**
+
+  - Reset a database to an empty state without deleting the file
+  - Preserves the database file but clears all contents
+  - Example: `nyadb.clear('users')`
+
+- **`rename()` method:**
+
+  - Rename a database file from one name to another
+  - Returns `false` if source doesn't exist or target already exists
+  - Example: `nyadb.rename('oldName', 'newName')`
+
+- **New configuration options:**
+  - `validateInput` (boolean, default: true)
+  - `useAtomicWrites` (boolean, default: true)
+  - `maxFileSize` (number, default: 100)
+  - `writeDebounce` (number, default: 10)
+  - `logLevel` (string, default: 'warn')
+
+### Improved
+
+- **Standardized return types**: All top-level database methods now return boolean values (true/false) instead of undefined
+- **Return value consistency:** `create()` and `delete()` methods now correctly return `false` when database already exists or doesn't exist, respectively
+- Better error handling throughout the codebase
+- More descriptive error messages
+- Graceful handling of corrupted database files
+- Updated TypeScript definitions with current default values
+
+### Fixed
+
+- Temporary files are now properly skipped during database loading
+- Improved cleanup of temporary files after write operations
+
+### Removed
+
+- Removed `word-wrap` override as the security issue has been resolved
+
+---
+
 ## [4.0.0](https://www.npmjs.com/package/@decaded/nyadb/v/4.0.0) (10-03-2025)
 
 ### Changed
@@ -80,10 +184,10 @@ All notable changes to the project will be documented in this file.
 
 ---
 
-## [1.6.0](https://www.npmjs.com/package/@decaded/nyadb/v/1.6.0) (11-07-2023)
+## [1.6.0](https://www.npmjs.com/package/@decaded/nyadb/v/1.6.0) (11-07-2023) <a name="160"></a>
 
 - [fix: CVE-2023-26115](https://security.snyk.io/vuln/SNYK-JS-WORDWRAP-3149973)
-  - by replacing [word-warp](https://www.npmjs.com/package/word-wrap) unmaintained repo with [word-warp fork by aashutoshrathi](https://github.com/aashutoshrathi/word-wrap)
+  - by replacing [word-wrap](https://www.npmjs.com/package/word-wrap) unmaintained repo with [word-wrap fork by aashutoshrathi](https://github.com/aashutoshrathi/word-wrap)
 
 ---
 
