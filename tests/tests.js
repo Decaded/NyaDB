@@ -66,6 +66,17 @@ function removeDirectory(directoryPath) {
 	fs.rmdirSync(directoryPath);
 }
 
+function withMutedConsoleError(callback) {
+	const originalConsoleError = console.error;
+	console.error = () => undefined;
+
+	try {
+		return callback();
+	} finally {
+		console.error = originalConsoleError;
+	}
+}
+
 /**
  * Test Suite
  */
@@ -409,7 +420,7 @@ async function runTests() {
 	// Test 16: Input validation - invalid database name (with validation enabled)
 	try {
 		const db = new NyaDB({ validateInput: true });
-		const result = db.create('../malicious');
+		const result = withMutedConsoleError(() => db.create('../malicious'));
 		assert.strictEqual(result, false, 'create() should return false for invalid name');
 		console.log('✓ Test 16: Input validation - invalid database name');
 		passedTests++;
@@ -421,8 +432,8 @@ async function runTests() {
 	// Test 16b: Size validation rejects traversal probes
 	try {
 		const db = new NyaDB({ validateInput: true });
-		const result = db.size('../package');
-		const statusResult = db.sizeStatus('../package');
+		const result = withMutedConsoleError(() => db.size('../package'));
+		const statusResult = withMutedConsoleError(() => db.sizeStatus('../package'));
 
 		assert.strictEqual(result, null, 'size() should return null for invalid database names');
 		assert.strictEqual(statusResult, null, 'sizeStatus() should return null for invalid database names');
@@ -456,7 +467,7 @@ async function runTests() {
 		await wait();
 		const circularData = { a: 1 };
 		circularData.self = circularData;
-		const result = db.set(TEST_DB_NAME, circularData);
+		const result = withMutedConsoleError(() => db.set(TEST_DB_NAME, circularData));
 		assert.strictEqual(result, false, 'set() should return false for circular data');
 		console.log('✓ Test 18: Set with invalid data (circular reference)');
 		passedTests++;
@@ -528,7 +539,7 @@ async function runTests() {
 		await wait();
 
 		try {
-			db.set(dbName, { payload });
+			withMutedConsoleError(() => db.set(dbName, { payload }));
 		} catch (err) {
 			criticalError = err;
 		}
@@ -744,7 +755,7 @@ async function runTests() {
 		];
 
 		for (const name of invalidNames) {
-			const result = db.create(name);
+			const result = withMutedConsoleError(() => db.create(name));
 			assert.strictEqual(result, false, `create() should fail for name with control chars: ${JSON.stringify(name)}`);
 		}
 
@@ -782,7 +793,7 @@ async function runTests() {
 		const reservedNames = ['CON', 'nul', 'LPT1', 'com1'];
 
 		for (const name of reservedNames) {
-			const result = db.create(name);
+			const result = withMutedConsoleError(() => db.create(name));
 			assert.strictEqual(result, false, `create() should fail for Windows reserved name: ${name}`);
 		}
 
