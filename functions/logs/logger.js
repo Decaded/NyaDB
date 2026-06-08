@@ -36,7 +36,7 @@ function shouldLog(messageLevel) {
 }
 
 /**
- * Logs a critical error that bypasses all settings, outputs to console.error, and shuts down the application.
+ * Logs a critical error that bypasses all settings, outputs to console.error, and throws.
  * @param {string} errorMessage - The critical error message.
  * @param {...any} additionalInfo - Additional information to log.
  */
@@ -57,8 +57,10 @@ function logCritical(errorMessage, ...additionalInfo) {
 		});
 	}
 	console.error('='.repeat(80));
-	console.error('Application shutting down to prevent data loss.\n');
-	process.exit(1);
+	console.error('Critical condition reached after preserving the latest write.\n');
+	const error = new Error(errorMessage);
+	error.isCritical = true;
+	throw error;
 }
 
 /**
@@ -94,6 +96,6 @@ function log(actionType, ...values) {
 		consoleMethod(`NyaDB | ${timestamp} | ${actionType} |`, ...filteredValues);
 	}
 }
-	
+
 module.exports = log;
 module.exports.logCritical = logCritical;

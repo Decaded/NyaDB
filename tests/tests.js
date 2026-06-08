@@ -1,7 +1,9 @@
 const assert = require('assert');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const NyaDB = require('../index');
+const config = require('../config/config');
 
 // Test configuration
 const TEST_PREFIX = '__nyadb_test__';
@@ -17,14 +19,28 @@ function cleanupTestDatabases() {
 	if (fs.existsSync(dbPath)) {
 		const files = fs.readdirSync(dbPath);
 		files.forEach(file => {
-			if (file.startsWith(TEST_PREFIX) || file.endsWith('.tmp')) {
+			if (file.startsWith(TEST_PREFIX) || file.endsWith('.tmp') || file === 'escape_link') {
 				try {
-					fs.unlinkSync(path.join(dbPath, file));
+					const filePath = path.join(dbPath, file);
+					if (fs.lstatSync(filePath).isDirectory()) {
+						fs.rmdirSync(filePath);
+					} else {
+						fs.unlinkSync(filePath);
+					}
 				} catch (err) {
 					// Ignore cleanup errors
 				}
 			}
 		});
+	}
+
+	const escapeTarget = path.resolve('./symlink_escape_target');
+	if (fs.existsSync(escapeTarget)) {
+		try {
+			fs.rmdirSync(escapeTarget);
+		} catch (err) {
+			// Ignore cleanup errors
+		}
 	}
 }
 
@@ -33,6 +49,21 @@ function cleanupTestDatabases() {
  */
 function wait(ms = 50) {
 	return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function removeDirectory(directoryPath) {
+	if (!fs.existsSync(directoryPath)) return;
+
+	fs.readdirSync(directoryPath).forEach(entry => {
+		const entryPath = path.join(directoryPath, entry);
+		if (fs.lstatSync(entryPath).isDirectory()) {
+			removeDirectory(entryPath);
+		} else {
+			fs.unlinkSync(entryPath);
+		}
+	});
+
+	fs.rmdirSync(directoryPath);
 }
 
 /**
@@ -54,6 +85,62 @@ async function runTests() {
 		passedTests++;
 	} catch (err) {
 		console.error('✗ Test 1 failed:', err.message);
+		failedTests++;
+	}
+
+	// Test 1b: Requiring package should not initialize storage
+	try {
+		const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nyadb-require-'));
+		const originalCwd = process.cwd();
+		const packagePath = path.resolve(__dirname, '..');
+		const indexPath = require.resolve(packagePath);
+
+		delete require.cache[indexPath];
+		try {
+			process.chdir(tempDir);
+			require(packagePath);
+		} finally {
+			process.chdir(originalCwd);
+		}
+
+		assert.strictEqual(fs.existsSync(path.join(tempDir, 'NyaDB')), false, 'Requiring NyaDB should not create the storage folder');
+		fs.rmdirSync(tempDir);
+		console.log('✓ Test 1b: Require does not initialize storage');
+		passedTests++;
+	} catch (err) {
+		console.error('✗ Test 1b failed:', err.message);
+		failedTests++;
+	}
+
+	// Test 1c: Loader ignores reserved JSON files
+	try {
+		const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nyadb-load-'));
+		const originalCwd = process.cwd();
+		const dbDir = path.join(tempDir, TEST_DB_FOLDER);
+		const validDbName = `${TEST_PREFIX}loader_real`;
+		const tempDbName = `${TEST_PREFIX}orphan.tmp-123`;
+		let db;
+
+		try {
+			fs.mkdirSync(dbDir);
+			fs.writeFileSync(path.join(dbDir, `${validDbName}.json`), JSON.stringify({ ok: true }), 'utf8');
+			fs.writeFileSync(path.join(dbDir, 'custom.json'), JSON.stringify({ hidden: true }), 'utf8');
+			fs.writeFileSync(path.join(dbDir, 'database_backup.json'), JSON.stringify({ hidden: true }), 'utf8');
+			fs.writeFileSync(path.join(dbDir, `${tempDbName}.json`), JSON.stringify({ hidden: true }), 'utf8');
+
+			process.chdir(tempDir);
+			db = new NyaDB();
+		} finally {
+			process.chdir(originalCwd);
+		}
+
+		const list = db.getList();
+		assert.deepStrictEqual(list, [validDbName], 'Only real database files should be loaded');
+		removeDirectory(tempDir);
+		console.log('✓ Test 1c: Loader ignores reserved JSON files');
+		passedTests++;
+	} catch (err) {
+		console.error('✗ Test 1c failed:', err.message);
 		failedTests++;
 	}
 
@@ -291,6 +378,34 @@ async function runTests() {
 		failedTests++;
 	}
 
+	// Test 15b: Size status of single and multiple databases
+	try {
+		const db = new NyaDB({ maxFileSize: 1 });
+		db.create(TEST_DB_NAME);
+		db.create(TEST_DB_NAME_2);
+		await wait();
+		db.set(TEST_DB_NAME, { a: 1 });
+		db.set(TEST_DB_NAME_2, { b: 2 });
+		await wait();
+
+		const singleStatus = db.sizeStatus(TEST_DB_NAME);
+		const allStatuses = db.sizeStatus();
+		const selectedStatuses = db.sizeStatus([TEST_DB_NAME, TEST_DB_NAME_2]);
+
+		assert.strictEqual(singleStatus.name, TEST_DB_NAME, 'Single status should have correct name');
+		assert.strictEqual(singleStatus.status, 'ok', 'Single status should be ok');
+		assert.ok(typeof singleStatus.percentOfLimit === 'number', 'Single status should have percentOfLimit');
+		assert.ok(allStatuses.databases[TEST_DB_NAME], 'All statuses should include first database');
+		assert.ok(selectedStatuses.databases[TEST_DB_NAME_2], 'Selected statuses should include second database');
+		assert.strictEqual(allStatuses.total.percentOfLimit, null, 'Total percentOfLimit should be null because maxFileSize is per database');
+		assert.strictEqual(allStatuses.total.status, 'unknown', 'Total status should be unknown because maxFileSize is per database');
+		console.log('✓ Test 15b: Size status of single and multiple databases');
+		passedTests++;
+	} catch (err) {
+		console.error('✗ Test 15b failed:', err.message);
+		failedTests++;
+	}
+
 	// Test 16: Input validation - invalid database name (with validation enabled)
 	try {
 		const db = new NyaDB({ validateInput: true });
@@ -300,6 +415,21 @@ async function runTests() {
 		passedTests++;
 	} catch (err) {
 		console.error('✗ Test 16 failed:', err.message);
+		failedTests++;
+	}
+
+	// Test 16b: Size validation rejects traversal probes
+	try {
+		const db = new NyaDB({ validateInput: true });
+		const result = db.size('../package');
+		const statusResult = db.sizeStatus('../package');
+
+		assert.strictEqual(result, null, 'size() should return null for invalid database names');
+		assert.strictEqual(statusResult, null, 'sizeStatus() should return null for invalid database names');
+		console.log('✓ Test 16b: Size validation rejects traversal probes');
+		passedTests++;
+	} catch (err) {
+		console.error('✗ Test 16b failed:', err.message);
 		failedTests++;
 	}
 
@@ -332,6 +462,89 @@ async function runTests() {
 		passedTests++;
 	} catch (err) {
 		console.error('✗ Test 18 failed:', err.message);
+		failedTests++;
+	}
+
+	// Test 18b: Configuration resets to defaults between instances
+	try {
+		new NyaDB({ validateInput: false, useAtomicWrites: false });
+		new NyaDB();
+
+		assert.strictEqual(config.validateInput, true, 'validateInput should reset to the default value');
+		assert.strictEqual(config.useAtomicWrites, true, 'useAtomicWrites should reset to the default value');
+		console.log('✓ Test 18b: Configuration resets to defaults between instances');
+		passedTests++;
+	} catch (err) {
+		console.error('✗ Test 18b failed:', err.message);
+		failedTests++;
+	}
+
+	// Test 18c: Set returns false for missing database
+	try {
+		const db = new NyaDB();
+		const result = db.set('missing_set_target', { a: 1 });
+		await wait();
+
+		assert.strictEqual(result, false, 'set() should return false for a missing database');
+		assert.strictEqual(db.exists('missing_set_target'), false, 'set() should not create a missing database');
+		console.log('✓ Test 18c: Set returns false for missing database');
+		passedTests++;
+	} catch (err) {
+		console.error('✗ Test 18c failed:', err.message);
+		failedTests++;
+	}
+
+	// Test 18d: Instance configuration is reapplied per operation
+	if (process.platform !== 'win32') {
+		try {
+			const unsafeDb = new NyaDB({ validateInput: false, useAtomicWrites: false });
+			new NyaDB();
+
+			const dbName = 'instance:config';
+			const result = unsafeDb.create(dbName);
+			await wait();
+
+			assert.strictEqual(result, true, 'Instance config should allow the operation after another instance resets defaults');
+			unsafeDb.delete(dbName);
+			await wait();
+			console.log('✓ Test 18d: Instance configuration is reapplied per operation');
+			passedTests++;
+		} catch (err) {
+			console.error('✗ Test 18d failed:', err.message);
+			failedTests++;
+		}
+	} else {
+		console.log('↷ Test 18d skipped (Windows filename rules)');
+	}
+
+	// Test 18e: Critical size writes are saved before stopping
+	try {
+		const db = new NyaDB({ maxFileSize: 1, writeDebounce: 0 });
+		const dbName = `${TEST_PREFIX}critical_size`;
+		const payload = 'x'.repeat(1024 * 1024);
+		let criticalError;
+
+		db.create(dbName);
+		await wait();
+
+		try {
+			db.set(dbName, { payload });
+		} catch (err) {
+			criticalError = err;
+		}
+
+		const filePath = path.join(TEST_DB_FOLDER, `${dbName}.json`);
+		const savedData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+
+		assert.ok(criticalError && criticalError.isCritical, 'Oversized write should raise a critical error');
+		assert.strictEqual(savedData.payload, payload, 'Oversized write should be saved before stopping');
+
+		db.delete(dbName);
+		await wait();
+		console.log('✓ Test 18e: Critical size writes are saved before stopping');
+		passedTests++;
+	} catch (err) {
+		console.error('✗ Test 18e failed:', err.message);
 		failedTests++;
 	}
 
@@ -518,6 +731,16 @@ async function runTests() {
 			'test\ndb', // newline
 			'test\tdb', // tab
 			'test\x7Fdb', // DEL
+			' testdb',
+			'testdb ',
+			'test<db',
+			'test>db',
+			'test:db',
+			'test"db',
+			'test|db',
+			'test?db',
+			'test*db',
+			'testdb.',
 		];
 
 		for (const name of invalidNames) {
@@ -525,7 +748,7 @@ async function runTests() {
 			assert.strictEqual(result, false, `create() should fail for name with control chars: ${JSON.stringify(name)}`);
 		}
 
-		console.log('✓ Test 28: Input validation - control characters rejected');
+		console.log('✓ Test 28: Input validation - unsafe filename characters rejected');
 		passedTests++;
 	} catch (err) {
 		console.error('✗ Test 28 failed:', err.message);
@@ -553,25 +776,21 @@ async function runTests() {
 	}
 
 	// Test 30: Windows reserved device names
-	if (process.platform === 'win32') {
-		try {
-			const db = new NyaDB({ validateInput: true });
+	try {
+		const db = new NyaDB({ validateInput: true });
 
-			const reservedNames = ['CON', 'nul', 'LPT1', 'com1'];
+		const reservedNames = ['CON', 'nul', 'LPT1', 'com1'];
 
-			for (const name of reservedNames) {
-				const result = db.create(name);
-				assert.strictEqual(result, false, `create() should fail for Windows reserved name: ${name}`);
-			}
-
-			console.log('✓ Test 30: Windows reserved device names rejected');
-			passedTests++;
-		} catch (err) {
-			console.error('✗ Test 30 failed:', err.message);
-			failedTests++;
+		for (const name of reservedNames) {
+			const result = db.create(name);
+			assert.strictEqual(result, false, `create() should fail for Windows reserved name: ${name}`);
 		}
-	} else {
-		console.log('↷ Test 30 skipped (not Windows)');
+
+		console.log('✓ Test 30: Windows reserved device names rejected');
+		passedTests++;
+	} catch (err) {
+		console.error('✗ Test 30 failed:', err.message);
+		failedTests++;
 	}
 
 	// Test 31: Symlink escape protection
@@ -593,6 +812,10 @@ async function runTests() {
 
 			if (!fs.existsSync(dbDir)) {
 				fs.mkdirSync(dbDir, { recursive: true });
+			}
+
+			if (fs.existsSync(linkPath)) {
+				fs.unlinkSync(linkPath);
 			}
 
 			try {

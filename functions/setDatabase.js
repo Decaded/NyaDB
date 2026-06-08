@@ -17,11 +17,12 @@ module.exports = function setDatabase(database, name, data) {
 			validateData(data);
 		}
 
-		if (!database[name]) {
+		if (!Object.prototype.hasOwnProperty.call(database, name)) {
 			log('Set Database', 'Database does not exist:', name);
 			return false;
 		}
 
+		const previousData = database[name];
 		const mergedData = {
 			...database[name],
 			...data,
@@ -29,10 +30,9 @@ module.exports = function setDatabase(database, name, data) {
 
 		log('Debug', `About to check merged data size for ${name}: ${JSON.stringify(mergedData).length} bytes`);
 
-		// Check merged data size and enforce limits with grace margin BEFORE updating database
-		// This will throw on critical error
+		let sizeStatus = { isCritical: false };
 		if (config.validateInput === true) {
-			checkMergedDataSize(name, mergedData, config.maxFileSize);
+			sizeStatus = checkMergedDataSize(name, mergedData, config.maxFileSize);
 		}
 
 		log('Debug', `Size check passed for ${name}, updating database`);
@@ -40,13 +40,38 @@ module.exports = function setDatabase(database, name, data) {
 		database[name] = mergedData;
 
 		log('Debug', `Calling saveFile for ${name}`);
-		saveFile(database[name], name);
+		const saved = saveFile(database[name], name);
+		if (!saved) {
+			database[name] = previousData;
+			return false;
+		}
 
 		log('Set Database', 'Database updated:', name, data);
+		if (sizeStatus.isCritical) {
+			const errorMsg = `Database '${name}' has reached the hard size limit (${sizeStatus.sizeMB.toFixed(2)}MB / ${sizeStatus.limitMB}MB).`;
+
+			log.logCritical(
+				errorMsg,
+				'The latest write was saved before raising this critical condition.',
+				`Database: ${name}`,
+				`Current size: ${sizeStatus.sizeMB.toFixed(2)}MB`,
+				`Configured limit: ${sizeStatus.limitMB}MB`,
+				'',
+				'Recommended actions:',
+				'1. Split your data into multiple databases',
+				'2. Increase maxFileSize in configuration',
+				'3. Archive old data to separate storage',
+			);
+		}
+
 		return true;
 	} catch (error) {
+		if (error && error.isCritical) {
+			throw error;
+		}
+
 		log('Error', 'Setting database:', error.message || error);
-		log('Debug', `setDatabase caught error, returning false without saving`);
+		log('Debug', 'setDatabase caught error, returning false');
 		return false;
 	}
 };

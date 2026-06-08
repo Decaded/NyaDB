@@ -48,7 +48,7 @@ All notable changes to the project will be documented in this file.
   - Prevents memory issues with large datasets
   - Warning at 80% of limit
   - Grace threshold at 99% of limit
-  - Hard block at or above 100% of limit with critical error that shuts down application to prevent data loss
+  - At or above 100% of limit, saves the latest write and raises a critical error so the application can stop cleanly
 
 - **Enhanced logging:**
 
@@ -60,6 +60,7 @@ All notable changes to the project will be documented in this file.
 - **Database size monitoring:**
 
   - Added `size` method to retrieve the size of a database
+  - Added `sizeStatus` method with percent-of-limit and status labels
   - Supports getting sizes of a specified database, multiple specified databases, or all existing databases
   - Returns detailed size information including byte count and formatted size
 

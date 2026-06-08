@@ -1,7 +1,3 @@
-/**
- * Ensure all necessary files are present.
- */
-require('./functions/startup/setupDatabase');
 const customConfig = require('./config/customConfig');
 const config = require('./config/config');
 const log = require('./functions/logs/logger');
@@ -14,111 +10,10 @@ const createDatabase = require('./functions/createDatabase');
 const deleteDatabase = require('./functions/deleteDatabase');
 const loadDatabase = require('./functions/loadDatabase');
 const setDatabase = require('./functions/setDatabase');
-const getSize = require('./functions/getSize');
+const size = require('./functions/size');
 const clearDatabase = require('./functions/clearDatabase');
 const renameDatabase = require('./functions/renameDatabase');
-
-/**
- * Array of scheduled actions (load, create, delete, set, clear, rename) and the name of the database to be used in the action.
- * @typedef {Object} ScheduledAction
- * @property {string} action - The action to be performed (create, delete, load, set, clear, rename).
- * @property {string} [name] - The name of the database to be used in the action (optional).
- * @property {object} [data] - The data to be used in the action (optional).
- */
-const scheduledActions = [];
-
-let database = loadDatabase();
-let isRunning = false;
-
-/**
- * Debounce timers for write operations per database.
- * @type {Object.<string, NodeJS.Timeout>}
- */
-const debounceTimers = {};
-
-/**
- * Pending set operations for debouncing.
- * @type {Object.<string, object>}
- */
-const pendingSetOperations = {};
-
-/**
- * Schedule a database action for execution.
- * @param {string} action - The action to be scheduled (create, delete, set, clear, rename).
- * @param {string} [name] - The name of the database to be used in the action (optional).
- * @param {object} [data] - The data to be used in the action (optional).
- * @param {boolean} [immediate] - Whether to execute immediately without debouncing.
- */
-async function scheduleAction(action, name, data, immediate = false) {
-	if (action === 'set' && config.writeDebounce > 0 && !immediate) {
-		if (debounceTimers[name]) {
-			clearTimeout(debounceTimers[name]);
-		}
-
-		if (!pendingSetOperations[name]) {
-			pendingSetOperations[name] = {};
-		}
-		Object.assign(pendingSetOperations[name], data);
-
-		debounceTimers[name] = setTimeout(() => {
-			const mergedData = pendingSetOperations[name];
-			delete pendingSetOperations[name];
-			delete debounceTimers[name];
-
-			scheduledActions.push({ action: 'set', name, data: mergedData });
-			scheduledActions.push({ action: 'load' });
-			synchronizedScheduler();
-		}, config.writeDebounce);
-
-		return;
-	}
-
-	// For immediate operations or non-set operations, schedule normally
-	scheduledActions.push({ action, name, data });
-	synchronizedScheduler();
-}
-
-/**
- * Ensure that database actions are executed sequentially without overlap.
- */
-function synchronizedScheduler() {
-	while (!isRunning && scheduledActions.length > 0) {
-		isRunning = true;
-		scheduler();
-		isRunning = false;
-	}
-}
-
-/**
- * Scheduler for database functions. Prevents corruption of the database.json file by ensuring sequential execution of actions.
- */
-function scheduler() {
-	const action = scheduledActions.shift();
-	log('Action Scheduled', action.action, action.name, action.data);
-	switch (action.action) {
-		case 'create':
-			createDatabase(action.name);
-			break;
-		case 'delete':
-			deleteDatabase(action.name);
-			break;
-		case 'load':
-			database = loadDatabase();
-			break;
-		case 'set':
-			setDatabase(database, action.name, action.data);
-			break;
-		case 'clear':
-			clearDatabase(action.name);
-			break;
-		case 'rename':
-			renameDatabase(action.name, action.data.newName);
-			break;
-		default:
-			log('Error', 'Unknown action:', action.action);
-			break;
-	}
-}
+const setupDatabase = require('./functions/startup/setupDatabase');
 
 /**
  * Main NyaDB class that handles all database operations.
@@ -152,8 +47,104 @@ module.exports = class NyaDB {
 	 * });
 	 */
 	constructor(userConfig) {
-		customConfig(userConfig);
+		this.userConfig = userConfig ? { ...userConfig } : undefined;
+		this.applyConfig();
+		setupDatabase();
+		this.database = loadDatabase();
+		this.scheduledActions = [];
+		this.isRunning = false;
+		this.debounceTimers = {};
+		this.pendingSetOperations = {};
 		log('NyaDB Initialized', userConfig);
+	}
+
+	/**
+	 * Applies this instance's configuration to the shared low-level modules.
+	 */
+	applyConfig() {
+		customConfig(this.userConfig);
+	}
+
+	/**
+	 * Schedule a database action for execution.
+	 * @param {string} action - The action to be scheduled (create, delete, set, clear, rename).
+	 * @param {string} [name] - The name of the database to be used in the action.
+	 * @param {object} [data] - The data to be used in the action.
+	 * @returns {boolean} Whether the action was scheduled or executed successfully.
+	 */
+	scheduleAction(action, name, data) {
+		this.applyConfig();
+
+		if (action === 'set' && config.writeDebounce > 0) {
+			if (this.debounceTimers[name]) {
+				clearTimeout(this.debounceTimers[name]);
+			}
+
+			if (!this.pendingSetOperations[name]) {
+				this.pendingSetOperations[name] = {};
+			}
+			Object.assign(this.pendingSetOperations[name], data);
+
+			this.debounceTimers[name] = setTimeout(() => {
+				this.applyConfig();
+				const mergedData = this.pendingSetOperations[name];
+				delete this.pendingSetOperations[name];
+				delete this.debounceTimers[name];
+
+				this.scheduledActions.push({ action: 'set', name, data: mergedData });
+				this.scheduledActions.push({ action: 'load' });
+				this.synchronizedScheduler();
+			}, config.writeDebounce);
+
+			return true;
+		}
+
+		this.scheduledActions.push({ action, name, data });
+		return this.synchronizedScheduler();
+	}
+
+	/**
+	 * Ensures scheduled database actions execute sequentially.
+	 * @returns {boolean} Whether the last executed action succeeded.
+	 */
+	synchronizedScheduler() {
+		let result = true;
+
+		while (!this.isRunning && this.scheduledActions.length > 0) {
+			this.isRunning = true;
+			result = this.scheduler();
+			this.isRunning = false;
+		}
+
+		return result;
+	}
+
+	/**
+	 * Executes the next scheduled database action.
+	 * @returns {boolean} Whether the action succeeded.
+	 */
+	scheduler() {
+		this.applyConfig();
+		const action = this.scheduledActions.shift();
+		log('Action Scheduled', action.action, action.name, action.data);
+		switch (action.action) {
+			case 'create':
+				return createDatabase(action.name);
+			case 'delete':
+				return deleteDatabase(action.name);
+			case 'load':
+				this.database = loadDatabase();
+				return true;
+			case 'set':
+				return setDatabase(this.database, action.name, action.data);
+			case 'clear':
+				return clearDatabase(action.name);
+			case 'rename':
+				return renameDatabase(action.name, action.data.newName);
+			default:
+				log('Error', 'Unknown action:', action.action);
+				return false;
+		}
 	}
 
 	/**
@@ -165,15 +156,18 @@ module.exports = class NyaDB {
 	 */
 	create(name) {
 		try {
+			this.applyConfig();
 			if (config.validateInput === true) validateDatabaseName(name);
 
-			if (database.hasOwnProperty(name)) {
+			if (Object.prototype.hasOwnProperty.call(this.database, name)) {
 				log('Create Database', 'Database already exists:', name);
 				return false;
 			}
 
-			scheduleAction('create', name);
-			scheduleAction('load');
+			const created = this.scheduleAction('create', name);
+			if (!created) return false;
+
+			this.scheduleAction('load');
 			return true;
 		} catch (error) {
 			log('Error', 'Create operation failed:', error.message);
@@ -190,15 +184,18 @@ module.exports = class NyaDB {
 	 */
 	delete(name) {
 		try {
+			this.applyConfig();
 			if (config.validateInput === true) validateDatabaseName(name);
 
-			if (!database.hasOwnProperty(name)) {
+			if (!Object.prototype.hasOwnProperty.call(this.database, name)) {
 				log('Delete Database', 'Database does not exist:', name);
 				return false;
 			}
 
-			scheduleAction('delete', name);
-			scheduleAction('load');
+			const deleted = this.scheduleAction('delete', name);
+			if (!deleted) return false;
+
+			this.scheduleAction('load');
 			return true;
 		} catch (error) {
 			log('Error', 'Delete operation failed:', error.message);
@@ -216,14 +213,23 @@ module.exports = class NyaDB {
 	 */
 	set(name, data) {
 		try {
+			this.applyConfig();
 			if (config.validateInput === true) {
 				validateDatabaseName(name);
 				validateData(data);
 			}
 
-			scheduleAction('set', name, data);
-			return true;
+			if (!Object.prototype.hasOwnProperty.call(this.database, name)) {
+				log('Set Database', 'Database does not exist:', name);
+				return false;
+			}
+
+			return this.scheduleAction('set', name, data);
 		} catch (error) {
+			if (error && error.isCritical) {
+				throw error;
+			}
+
 			log('Error', 'Set operation failed:', error.message);
 			return false;
 		}
@@ -240,8 +246,9 @@ module.exports = class NyaDB {
 	 * }
 	 */
 	get(name) {
-		if (database.hasOwnProperty(name)) {
-			return database[name];
+		this.applyConfig();
+		if (Object.prototype.hasOwnProperty.call(this.database, name)) {
+			return this.database[name];
 		} else {
 			return false;
 		}
@@ -255,7 +262,8 @@ module.exports = class NyaDB {
 	 * console.log(allDatabases); // ['users', 'posts', 'comments']
 	 */
 	getList() {
-		return Object.keys(database);
+		this.applyConfig();
+		return Object.keys(this.database);
 	}
 
 	/**
@@ -268,7 +276,18 @@ module.exports = class NyaDB {
 	 * nyadb.size(['test1', 'test2']); // Returns sizes for multiple databases with total
 	 */
 	size(names) {
-		return getSize(names, database);
+		this.applyConfig();
+		return size(names, this.database);
+	}
+
+	/**
+	 * Returns size information with percent-of-limit and status labels.
+	 * @param {string|string[]} [names] - Database name(s) to check. If not provided, returns statuses for all databases.
+	 * @returns {object|null} Size status information for the requested database(s).
+	 */
+	sizeStatus(names) {
+		this.applyConfig();
+		return size.getStatus(names, this.database);
 	}
 
 	/**
@@ -282,9 +301,10 @@ module.exports = class NyaDB {
 	 */
 	exists(name) {
 		try {
+			this.applyConfig();
 			if (config.validateInput === true) validateDatabaseName(name);
 
-			return database.hasOwnProperty(name);
+			return Object.prototype.hasOwnProperty.call(this.database, name);
 		} catch (error) {
 			log('Error', 'Exists check failed:', error.message);
 			return false;
@@ -301,15 +321,18 @@ module.exports = class NyaDB {
 	 */
 	clear(name) {
 		try {
+			this.applyConfig();
 			if (config.validateInput === true) validateDatabaseName(name);
 
-			if (!database.hasOwnProperty(name)) {
+			if (!Object.prototype.hasOwnProperty.call(this.database, name)) {
 				log('Clear Database', 'Database does not exist:', name);
 				return false;
 			}
 
-			scheduleAction('clear', name);
-			scheduleAction('load');
+			const cleared = this.scheduleAction('clear', name);
+			if (!cleared) return false;
+
+			this.scheduleAction('load');
 			return true;
 		} catch (error) {
 			log('Error', 'Clear operation failed:', error.message);
@@ -327,23 +350,26 @@ module.exports = class NyaDB {
 	 */
 	rename(oldName, newName) {
 		try {
+			this.applyConfig();
 			if (config.validateInput === true) {
 				validateDatabaseName(oldName);
 				validateDatabaseName(newName);
 			}
 
-			if (!database.hasOwnProperty(oldName)) {
+			if (!Object.prototype.hasOwnProperty.call(this.database, oldName)) {
 				log('Rename Database', 'Source database does not exist:', oldName);
 				return false;
 			}
 
-			if (database.hasOwnProperty(newName)) {
+			if (Object.prototype.hasOwnProperty.call(this.database, newName)) {
 				log('Rename Database', 'Target database already exists:', newName);
 				return false;
 			}
 
-			scheduleAction('rename', oldName, { newName });
-			scheduleAction('load');
+			const renamed = this.scheduleAction('rename', oldName, { newName });
+			if (!renamed) return false;
+
+			this.scheduleAction('load');
 			return true;
 		} catch (error) {
 			log('Error', 'Rename operation failed:', error.message);

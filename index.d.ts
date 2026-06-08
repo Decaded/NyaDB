@@ -59,7 +59,7 @@ interface NyaDBConfig {
 	 * Maximum file size in megabytes. Default is 100MB.
 	 * - Warning at 80% of limit
 	 * - Grace threshold at 99% of limit
-	 * - Hard block at 100% (critical error, shuts down application)
+	 * - Saves the latest write at 100%, then raises a critical error
 	 * @default 100
 	 */
 	maxFileSize?: number;
@@ -98,6 +98,21 @@ interface DatabaseSize {
 }
 
 /**
+ * Size information with usage status against maxFileSize.
+ */
+interface DatabaseSizeStatus extends DatabaseSize {
+	/**
+	 * Percentage of maxFileSize used, or null if no limit is configured.
+	 */
+	percentOfLimit: number | null;
+
+	/**
+	 * Status based on maxFileSize thresholds.
+	 */
+	status: 'ok' | 'warning' | 'grace' | 'critical' | 'unknown';
+}
+
+/**
  * Size information for multiple databases with totals.
  */
 interface MultipleDatabaseSize {
@@ -121,6 +136,43 @@ interface MultipleDatabaseSize {
 		 * Human-readable formatted total size.
 		 */
 		formatted: string;
+	};
+}
+
+/**
+ * Size status information for multiple databases with totals.
+ */
+interface MultipleDatabaseSizeStatus {
+	/**
+	 * Object containing size status information for each database.
+	 */
+	databases: {
+		[key: string]: DatabaseSizeStatus;
+	};
+
+	/**
+	 * Total size status across all databases.
+	 */
+	total: {
+		/**
+		 * Total size in bytes.
+		 */
+		bytes: number;
+
+		/**
+		 * Human-readable formatted total size.
+		 */
+		formatted: string;
+
+		/**
+		 * Null because maxFileSize applies per database file, not to combined total storage.
+		 */
+		percentOfLimit: number | null;
+
+		/**
+		 * Unknown because maxFileSize applies per database file, not to combined total storage.
+		 */
+		status: 'ok' | 'warning' | 'grace' | 'critical' | 'unknown';
 	};
 }
 
@@ -225,6 +277,13 @@ declare class NyaDB {
 	size(names?: string | string[]): DatabaseSize | MultipleDatabaseSize | null;
 
 	/**
+	 * Returns size information with percent-of-limit and status labels.
+	 * @param {string | string[]} names - Database name(s) to check. If not provided, returns statuses for all databases.
+	 * @returns {DatabaseSizeStatus | MultipleDatabaseSizeStatus | null} - Size status information for the requested database(s), or null if not found.
+	 */
+	sizeStatus(names?: string | string[]): DatabaseSizeStatus | MultipleDatabaseSizeStatus | null;
+
+	/**
 	 * Checks if a database with the given name exists.
 	 * @param {string} name - The name of the database to check.
 	 * @returns {boolean} - True if the database exists, false otherwise.
@@ -257,4 +316,4 @@ declare class NyaDB {
 }
 
 export default NyaDB;
-export { NyaDBConfig, DatabaseSize, MultipleDatabaseSize };
+export { NyaDBConfig, DatabaseSize, DatabaseSizeStatus, MultipleDatabaseSize, MultipleDatabaseSizeStatus };

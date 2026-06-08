@@ -14,7 +14,9 @@ module.exports = function clearDatabase(name) {
 			validateDatabaseName(name);
 		}
 
-		saveFile({}, name);
+		const saved = saveFile({}, name);
+		if (!saved) return false;
+
 		log('Clear Database', 'Database cleared:', name);
 		return true;
 	} catch (error) {

@@ -1,8 +1,7 @@
 const { writeFileSync } = require('fs');
-const path = require('path');
 const config = require('../../config/config');
 const log = require('../logs/logger');
-const { safeAtomicWrite } = require('../validation/validateInput');
+const { getDatabaseFilePath, safeAtomicWrite } = require('../validation/validateInput');
 
 /**
  * Saves the database object to a JSON file.
@@ -13,7 +12,7 @@ const { safeAtomicWrite } = require('../validation/validateInput');
  */
 module.exports = function saveFile(database, dbName) {
 	try {
-		const fullPath = path.join('./', config.storage.databaseFolderName, `${dbName}.json`);
+		const fullPath = getDatabaseFilePath(dbName, { validate: config.validateInput === true });
 
 		const jsonString = config.formattingEnabled
 			? JSON.stringify(database, null, config.formattingStyle === 'space' ? ' '.repeat(config.indentSize) : '\t')

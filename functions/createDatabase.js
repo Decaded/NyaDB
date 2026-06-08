@@ -16,13 +16,15 @@ module.exports = function createDatabase(name) {
 		}
 
 		const database = loadFile();
-		if (database[name]) {
+		if (Object.prototype.hasOwnProperty.call(database, name)) {
 			log('Create Database', 'Database already exists:', name);
 			return false;
 		}
 
 		database[name] = {};
-		saveFile(database[name], name);
+		const saved = saveFile(database[name], name);
+		if (!saved) return false;
+
 		log('Create Database', 'Database created:', name);
 		return true;
 	} catch (error) {

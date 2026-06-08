@@ -113,6 +113,17 @@ console.log(allSizes.databases); // Object with all database sizes
 console.log(allSizes.total.formatted); // Total size of all databases
 ```
 
+### Checking database size status
+
+```js
+const status = nyadb.sizeStatus('test');
+console.log(status);
+// { name: 'test', bytes: 1234, formatted: '1.21 KB', percentOfLimit: 0.01, status: 'ok' }
+
+const allStatuses = nyadb.sizeStatus();
+console.log(allStatuses.total.status); // 'ok', 'warning', 'grace', 'critical', or 'unknown'
+```
+
 ### Deleting data
 
 ```js
@@ -133,7 +144,7 @@ You can customize the behavior of the application by modifying the following set
 | logLevel          | warn          | error, warn, info, debug                | Log level for filtering log messages. Only affects logs when `enableConsoleLogs` is true. The log priority is: `error` > `warn` > `info` > `debug`                                  |
 | validateInput     | true          | false                                   | Enable input validation for database names and data. Prevents path traversal and validates data integrity.                                                                  |
 | useAtomicWrites   | true          | false                                   | Enable atomic write operations using temp file + rename pattern. Requires `validateInput: true` (throws error if not met). Prevents possible data corruption during writes. |
-| maxFileSize       | 100           | Any non-negative integer                | Maximum file size in megabytes. Warns at 80%, grace threshold at 99%, hard blocks at 100% (critical error that shuts down application to prevent data loss).                |
+| maxFileSize       | 100           | Any non-negative integer                | Maximum file size in megabytes. Warns at 80%, grace threshold at 99%, saves the latest write at 100%, then raises a critical error so the app can stop cleanly.             |
 | writeDebounce     | 10            | Any non-negative integer                | Debounce delay for write operations in milliseconds. Automatically batches rapid writes for better performance. Set to 0 to disable.                                        |
 
 ### Example

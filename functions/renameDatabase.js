@@ -1,8 +1,7 @@
 const { renameSync, existsSync } = require('fs');
-const path = require('path');
 const config = require('../config/config');
 const log = require('./logs/logger');
-const { validateDatabaseName } = require('./validation/validateInput');
+const { getDatabaseFilePath, validateDatabaseName } = require('./validation/validateInput');
 
 /**
  * Renames a database file.
@@ -17,8 +16,8 @@ module.exports = function renameDatabase(oldName, newName) {
 			validateDatabaseName(newName);
 		}
 
-		const oldPath = path.join('./', config.storage.databaseFolderName, `${oldName}.json`);
-		const newPath = path.join('./', config.storage.databaseFolderName, `${newName}.json`);
+		const oldPath = getDatabaseFilePath(oldName, { validate: false });
+		const newPath = getDatabaseFilePath(newName, { validate: false });
 
 		if (!existsSync(oldPath)) {
 			log('Rename Database', 'Source database does not exist:', oldName);

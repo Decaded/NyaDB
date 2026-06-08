@@ -18,6 +18,17 @@ function resolveDataRoot(rootDir) {
 	return path.resolve(process.cwd(), String(folderName));
 }
 
+function getDatabaseFilePath(dbName, opts = {}) {
+	const ext = opts.ext || '.json';
+	const rootDir = opts.rootDir;
+
+	if (opts.validate !== false && config.validateInput === true) {
+		validateDatabaseName(dbName, rootDir);
+	}
+
+	return path.resolve(resolveDataRoot(rootDir), dbName + ext);
+}
+
 /**
  * Validates a database name to ensure it cannot escape the configured data root.
  * - If config.validateInput === false, validation is entirely skipped (after type check).
@@ -47,6 +58,12 @@ function validateDatabaseName(name, rootDir) {
 		throw err;
 	}
 
+	if (trimmed !== name) {
+		const err = new Error('Database name cannot start or end with whitespace.');
+		log('Error', 'Validation failed:', err.message);
+		throw err;
+	}
+
 	// Disallow ASCII control characters
 	if (/[\x00-\x1F\x7F]/.test(trimmed)) {
 		const err = new Error('Database name contains invalid control characters.');
@@ -68,13 +85,23 @@ function validateDatabaseName(name, rootDir) {
 		throw err;
 	}
 
+	if (/[<>:"|?*]/.test(trimmed)) {
+		const err = new Error('Database name contains characters that are invalid on Windows filesystems.');
+		log('Error', 'Validation failed:', err.message);
+		throw err;
+	}
+
 	// Windows reserved device names
-	if (process.platform === 'win32') {
-		if (/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(trimmed)) {
-			const err = new Error('Database name is a reserved device name on Windows.');
-			log('Error', 'Validation failed:', err.message);
-			throw err;
-		}
+	if (/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(trimmed)) {
+		const err = new Error('Database name is a reserved device name on Windows.');
+		log('Error', 'Validation failed:', err.message);
+		throw err;
+	}
+
+	if (/[ .]$/.test(trimmed)) {
+		const err = new Error('Database name cannot end with a space or dot.');
+		log('Error', 'Validation failed:', err.message);
+		throw err;
 	}
 
 	// Length cap
@@ -176,7 +203,7 @@ function safeAtomicWrite(rootDir, dbName, dataString, opts = {}) {
 		fs.mkdirSync(rootAbs, { recursive: true });
 	}
 
-	const finalPath = path.resolve(rootAbs, dbName + ext);
+	const finalPath = getDatabaseFilePath(dbName, { rootDir: rootAbs, ext, validate: false });
 
 	// Create a reasonably unique temp filename inside the same dir
 	const tmpName = `${dbName}.tmp-${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
@@ -241,12 +268,17 @@ function validateData(data) {
  * @param {string} name - The database name.
  * @param {object} mergedData - The merged data to check.
  * @param {number} maxSizeMB - Maximum size in megabytes (optional, from config).
- * @throws {Error} - If the data exceeds the hard limit (critical error, shuts down app).
- * @returns {boolean} - Returns true if valid.
+ * @returns {object} - Size status for the merged data.
  */
 function checkMergedDataSize(name, mergedData, maxSizeMB) {
 	const encoding = (config && config.encoding) || 'utf8';
-	if (!maxSizeMB) return true;
+	if (!maxSizeMB) {
+		return {
+			isCritical: false,
+			sizeMB: 0,
+			limitMB: 0,
+		};
+	}
 
 	const jsonString = JSON.stringify(mergedData);
 	const sizeInBytes = Buffer.byteLength(jsonString, encoding);
@@ -255,41 +287,25 @@ function checkMergedDataSize(name, mergedData, maxSizeMB) {
 	const warningThresholdMB = limitMB * 0.8;
 	const graceThresholdMB = limitMB * 0.99;
 
-	if (sizeMB >= limitMB) {
-		// Throw error first to prevent execution continuation (mostly tests with mocked process.exit)
-		const errorMsg = `Database '${name}' has reached the hard size limit (${sizeMB.toFixed(2)}MB / ${limitMB}MB).`;
-
-		log.logCritical(
-			errorMsg,
-			'This write operation has been blocked to prevent data corruption and memory issues.',
-			`Database: ${name}`,
-			`Current size: ${sizeMB.toFixed(2)}MB`,
-			`Configured limit: ${limitMB}MB`,
-			'',
-			'Recommended actions:',
-			'1. Split your data into multiple databases',
-			'2. Increase maxFileSize in configuration',
-			'3. Archive old data to separate storage',
-		);
-
-		// This line should never be reached in production, however in tests with mocked process.exit, we need to throw to stop execution
-		throw new Error(errorMsg);
-	}
-
 	if (sizeMB > warningThresholdMB && sizeMB < graceThresholdMB) {
 		log('Warning', `Database '${name}' size (${sizeMB.toFixed(2)}MB) approaching limit (${limitMB}MB at 100%).`);
 	}
 
 	if (sizeMB >= graceThresholdMB && sizeMB < limitMB) {
-		log('Error', `Database '${name}' size (${sizeMB.toFixed(2)}MB) in grace threshold (99% of ${limitMB}MB limit). Next write may be blocked!`);
+		log('Error', `Database '${name}' size (${sizeMB.toFixed(2)}MB) in grace threshold (99% of ${limitMB}MB limit). Next write may trigger a critical stop.`);
 	}
 
-	return true;
+	return {
+		isCritical: sizeMB >= limitMB,
+		sizeMB,
+		limitMB,
+	};
 }
 
 module.exports = {
+	getDatabaseFilePath,
+	resolveDataRoot,
 	validateDatabaseName,
-	assertRealPathInsideRoot,
 	validateData,
 	checkMergedDataSize,
 	safeAtomicWrite,

@@ -1,48 +1,52 @@
-const { readFileSync, readdirSync } = require('fs');
+const { readFileSync, readdirSync, statSync } = require('fs');
 const path = require('path');
 const config = require('../../config/config');
 const log = require('../logs/logger');
+const { resolveDataRoot } = require('../validation/validateInput');
+
+function shouldLoadDatabaseFile(file) {
+	if (!file.endsWith('.json')) return false;
+	if (file === 'database_backup.json') return false;
+	if (file === 'custom.json') return false;
+	if (file.endsWith('.tmp.json') || file.includes('.tmp-')) return false;
+
+	return true;
+}
+
+function isWithinMaxFileSize(filePath, fileName) {
+	if (!config.maxFileSize) return true;
+
+	const stats = statSync(filePath);
+	const limitBytes = Number(config.maxFileSize) * 1024 * 1024;
+
+	if (stats.size >= limitBytes) {
+		log('Error', `Skipping ${fileName}: file size exceeds configured maxFileSize.`);
+		return false;
+	}
+
+	return true;
+}
 
 /**
- * Loads data from all database files, excluding the migrated database backup and temporary files.
- * @returns {object} - The combined data from all database files, excluding migrated ones.
- * @throws {Error} - If there is an error loading the files.
+ * Loads data from all user database files, excluding config, backup, and temporary files.
+ * @returns {object} - The combined data from all readable database files.
  */
 module.exports = function loadFile() {
 	try {
-		const databaseFolderPath = path.join('./', config.storage.databaseFolderName);
-		const files = readdirSync(databaseFolderPath).filter(file => file.endsWith('.json'));
+		const databaseFolderPath = resolveDataRoot();
+		const files = readdirSync(databaseFolderPath).filter(shouldLoadDatabaseFile);
 		const database = {};
 		const successfullyLoadedFiles = [];
 		const failedFiles = [];
 
 		files.forEach(file => {
-			if (file === 'database_backup.json') {
-				const filePath = path.join(databaseFolderPath, file);
-				try {
-					const data = readFileSync(filePath, config.encoding);
-					const parsedData = JSON.parse(data);
-
-					// Check if "migrated": true is present in the backup data
-					if (parsedData.databaseMigratedToDedicatedFiles === true) {
-						log('Load File', `Skipping migrated backup file: ${file}`);
-						return;
-					}
-				} catch (error) {
-					log('Error', `Failed to check migration status of ${file}:`, error.message);
-					return;
-				}
-			}
-
-			// Skip temporary files
-			if (file.endsWith('.tmp.json') || file.includes('.tmp-')) {
-				log('Load File', `Skipping temporary file: ${file}`);
-				return;
-			}
-
-			// Process other database files
 			try {
 				const filePath = path.join(databaseFolderPath, file);
+				if (!isWithinMaxFileSize(filePath, file)) {
+					failedFiles.push({ file, error: 'File too large' });
+					return;
+				}
+
 				const data = readFileSync(filePath, config.encoding);
 				const dbName = file.replace('.json', '');
 
