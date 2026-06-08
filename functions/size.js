@@ -1,0 +1,185 @@
+const { statSync, existsSync } = require('fs');
+const config = require('../config/config');
+const log = require('./logs/logger');
+const { getDatabaseFilePath, validateDatabaseName } = require('./validation/validateInput');
+
+/**
+ * Formats bytes to human-readable format.
+ * @param {number} bytes - The size in bytes.
+ * @param {number} decimals - Number of decimal places.
+ * @returns {string} - Formatted size string.
+ */
+function formatBytes(bytes, decimals = 2) {
+	if (bytes === 0) return '0 Bytes';
+
+	const k = 1024;
+	const dm = decimals < 0 ? 0 : decimals;
+	const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+
+	const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+	return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}
+
+/**
+ * Gets the size of a single database file.
+ * @param {string} dbName - The name of the database.
+ * @param {boolean} shouldValidate - Whether the name came from external input.
+ * @returns {object|null} - Object containing size info or null if file doesn't exist.
+ */
+function getDatabaseSize(dbName, shouldValidate = true) {
+	try {
+		if (shouldValidate && config.validateInput === true) {
+			validateDatabaseName(dbName);
+		}
+
+		const filePath = getDatabaseFilePath(dbName, { validate: false });
+
+		if (!existsSync(filePath)) {
+			return null;
+		}
+
+		const stats = statSync(filePath);
+		return {
+			name: dbName,
+			bytes: stats.size,
+			formatted: formatBytes(stats.size),
+		};
+	} catch (error) {
+		log('Error', `Getting size for database '${dbName}':`, error);
+		return null;
+	}
+}
+
+function getStatus(bytes, applyLimit = true) {
+	if (!applyLimit) {
+		return {
+			percentOfLimit: null,
+			status: 'unknown',
+		};
+	}
+
+	const limitBytes = Number(config.maxFileSize) * 1024 * 1024;
+
+	if (!limitBytes) {
+		return {
+			percentOfLimit: null,
+			status: 'unknown',
+		};
+	}
+
+	const percentOfLimit = (bytes / limitBytes) * 100;
+	let status = 'ok';
+
+	if (percentOfLimit >= 100) {
+		status = 'critical';
+	} else if (percentOfLimit >= 99) {
+		status = 'grace';
+	} else if (percentOfLimit >= 80) {
+		status = 'warning';
+	}
+
+	return {
+		percentOfLimit: parseFloat(percentOfLimit.toFixed(2)),
+		status,
+	};
+}
+
+function addStatus(sizeInfo) {
+	if (!sizeInfo) return null;
+
+	return {
+		...sizeInfo,
+		...getStatus(sizeInfo.bytes),
+	};
+}
+
+function collectSizesForNames(names, database, includeStatus = false) {
+	const shouldValidate = Boolean(names && !(Array.isArray(names) && names.length === 0));
+	const allDatabases = !shouldValidate
+		? Object.keys(database)
+		: names;
+	const sizes = {};
+	let totalBytes = 0;
+
+	allDatabases.forEach(dbName => {
+		const sizeInfo = getDatabaseSize(dbName, shouldValidate);
+		if (sizeInfo) {
+			sizes[dbName] = includeStatus ? addStatus(sizeInfo) : sizeInfo;
+			totalBytes += sizeInfo.bytes;
+		}
+	});
+
+	const total = {
+		bytes: totalBytes,
+		formatted: formatBytes(totalBytes),
+	};
+
+	return {
+		databases: sizes,
+		total: includeStatus ? { ...total, ...getStatus(totalBytes, false) } : total,
+	};
+}
+
+/**
+ * Gets the size of one or more databases.
+ * @param {string|string[]|null} names - Database name(s) or null for all databases.
+ * @param {object} database - The current database object.
+ * @returns {object|object[]} - Size information for requested database(s).
+ */
+module.exports = function size(names, database) {
+	try {
+		// If no names provided, get all databases
+		if (!names || (Array.isArray(names) && names.length === 0)) {
+			log('Get Size', 'Retrieved sizes for all databases');
+			return collectSizesForNames(names, database);
+		}
+
+		// If single string provided, return single database size
+		if (typeof names === 'string') {
+			const sizeInfo = getDatabaseSize(names);
+			if (!sizeInfo) {
+				log('Get Size', `Database '${names}' not found`);
+				return null;
+			}
+			log('Get Size', `Retrieved size for database '${names}'`);
+			return sizeInfo;
+		}
+
+		// If array provided, return sizes for specified databases
+		if (Array.isArray(names)) {
+			log('Get Size', `Retrieved sizes for ${names.length} database(s)`);
+			return collectSizesForNames(names, database);
+		}
+
+		log('Error', 'Invalid parameter type for size');
+		return null;
+	} catch (error) {
+		log('Error', 'Getting database size(s):', error);
+		return null;
+	}
+};
+
+module.exports.getStatus = function sizeStatus(names, database) {
+	try {
+		if (typeof names === 'string') {
+			const sizeInfo = getDatabaseSize(names);
+			if (!sizeInfo) {
+				log('Get Size Status', `Database '${names}' not found`);
+				return null;
+			}
+
+			return addStatus(sizeInfo);
+		}
+
+		if (!names || Array.isArray(names)) {
+			return collectSizesForNames(names, database, true);
+		}
+
+		log('Error', 'Invalid parameter type for sizeStatus');
+		return null;
+	} catch (error) {
+		log('Error', 'Getting database size status:', error);
+		return null;
+	}
+};

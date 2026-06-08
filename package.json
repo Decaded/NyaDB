@@ -1,11 +1,21 @@
 {
   "name": "@decaded/nyadb",
-  "version": "4.0.1",
+  "version": "5.0.0",
   "description": "Simple JSON \"database\" for NodeJS.",
   "main": "index.js",
   "scripts": {
-    "test": "node tests/tests.js"
+    "test": "node tests/tests.js",
+    "lint": "eslint ."
   },
+  "files": [
+    "CHANGELOG.md",
+    "LICENSE.md",
+    "README.md",
+    "config",
+    "functions",
+    "index.d.ts",
+    "index.js"
+  ],
   "author": "Decaded (https://decaded.dev)",
   "funding": {
     "type": "ko-fi",
@@ -24,12 +34,8 @@
     "database",
     "cache"
   ],
-  "overrides": {
-    "word-wrap": "@aashutoshrathi/word-wrap"
-  },
   "devDependencies": {
-    "assert": "^2.1.0",
-    "eslint": "^9.3.0"
+    "eslint": "^10.4.1"
   },
   "engines": {
     "node": ">=12.x"

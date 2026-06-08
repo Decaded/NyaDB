@@ -33,8 +33,13 @@ module.exports = function migrateOldData() {
 
 		// Migrate each database to its own file
 		for (const dbName in oldDatabase) {
-			if (oldDatabase.hasOwnProperty(dbName)) {
-				saveFile(oldDatabase[dbName], dbName);
+			if (Object.prototype.hasOwnProperty.call(oldDatabase, dbName)) {
+				const saved = saveFile(oldDatabase[dbName], dbName);
+				if (!saved) {
+					log('Error', `Migration failed while saving database: ${dbName}`);
+					return false;
+				}
+
 				log('Migration', `Migrated database: ${dbName}`);
 			}
 		}
