@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="description" content="NyaDB is a simple JSON database package for Node.js with validation, atomic writes, size checks, and TypeScript types.">
+	<title>NyaDB - Simple JSON Databases for Node.js</title>
+	<script>
+		(function () {
+			var savedTheme = localStorage.getItem('nyadb-theme') || 'system';
+			var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+			document.documentElement.dataset.theme = savedTheme === 'system' ? (prefersDark ? 'dark' : 'light') : savedTheme;
+			document.documentElement.dataset.themeMode = savedTheme;
+		}());
+	</script>
+	<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+	<header class="site-header">
+		<a class="brand" href="#top" aria-label="NyaDB home">
+			<span class="brand-mark">N</span>
+			<span>NyaDB</span>
+		</a>
+		<nav class="top-nav" aria-label="Primary">
+			<a href="#install">Install</a>
+			<a href="#playground">Playground</a>
+			<a href="#api">API</a>
+			<a href="#config">Config</a>
+			<a href="#migration">Migration</a>
+		</nav>
+		<div class="theme-switcher" aria-label="Theme">
+			<button class="theme-option" type="button" data-theme-choice="system">System</button>
+			<button class="theme-option" type="button" data-theme-choice="light">Light</button>
+			<button class="theme-option" type="button" data-theme-choice="dark">Dark</button>
+		</div>
+	</header>
+
+	<main id="top">
+		<section class="hero">
+			<div class="hero-copy">
+				<p class="eyebrow">Node.js JSON storage</p>
+				<h1>NyaDB</h1>
+				<p class="lede">A tiny file-backed database for projects that need readable JSON files, simple methods, and safer defaults without adding a database server.</p>
+				<div class="badge-row" aria-label="Package badges">
+					<a href="https://www.npmjs.com/package/@decaded/nyadb"><img src="https://img.shields.io/npm/v/@decaded/nyadb" alt="npm version"></a>
+					<a href="https://www.npmjs.com/package/@decaded/nyadb"><img src="https://img.shields.io/npm/unpacked-size/@decaded/nyadb" alt="npm unpacked size"></a>
+					<a href="https://www.npmjs.com/package/@decaded/nyadb"><img src="https://img.shields.io/npm/dt/@decaded/nyadb" alt="npm downloads"></a>
+					<a href="https://github.com/Decaded/NyaDB/blob/master/LICENSE.md"><img src="https://img.shields.io/github/license/Decaded/NyaDB" alt="license"></a>
+					<a href="https://nodejs.org/"><img src="https://img.shields.io/badge/Node.js-%3E=12.x-green.svg" alt="Node.js version 12 or newer"></a>
+				</div>
+				<div class="command-row">
+					<code>npm install @decaded/nyadb</code>
+					<button class="copy-button" type="button" data-copy="npm install @decaded/nyadb">Copy</button>
+				</div>
+				<div class="hero-actions">
+					<a class="primary-action" href="#quickstart">Quick Start</a>
+					<a class="secondary-action" href="https://github.com/Decaded/NyaDB">GitHub</a>
+				</div>
+			</div>
+
+			<div class="hero-visual" aria-label="NyaDB file preview">
+				<div class="visual-toolbar">
+					<span></span>
+					<span></span>
+					<span></span>
+					<strong>NyaDB/users.json</strong>
+				</div>
+				<div class="file-stack">
+					<div class="file-card active">
+						<span>users.json</span>
+						<strong id="hero-size">312 B</strong>
+					</div>
+					<div class="file-card">
+						<span>settings.json</span>
+						<strong>128 B</strong>
+					</div>
+					<div class="file-card">
+						<span>cache.json</span>
+						<strong>84 B</strong>
+					</div>
+				</div>
+				<pre class="json-window"><code id="hero-json">{
+	"ada": {
+		"role": "admin",
+		"active": true
+	},
+	"linus": {
+		"role": "maintainer",
+		"active": true
+	}
+}</code></pre>
+			</div>
+		</section>
+
+		<section class="signal-strip" aria-label="Highlights">
+			<div>
+				<strong>Validated names</strong>
+				<span>Path traversal protection is enabled by default.</span>
+			</div>
+			<div>
+				<strong>Atomic writes</strong>
+				<span>Temp-file writes help protect data during updates.</span>
+			</div>
+			<div>
+				<strong>Typed API</strong>
+				<span>TypeScript definitions ship with the package.</span>
+			</div>
+		</section>
+
+		<section class="install" id="install">
+			<div class="section-heading">
+				<p class="eyebrow">Install</p>
+				<h2>What NyaDB creates in your project.</h2>
+			</div>
+			<div class="info-grid">
+				<article>
+					<h3>Node.js requirement</h3>
+					<p>NyaDB supports Node.js <code>&gt;=12.x</code>. It is published as a CommonJS package and can be required directly from Node projects.</p>
+				</article>
+				<article>
+					<h3>Storage layout</h3>
+					<p>Every database is stored as a separate JSON file inside a <code>NyaDB</code> folder in your project's root directory.</p>
+				</article>
+				<article>
+					<h3>Default setup</h3>
+					<p>Creating a new instance applies configuration, prepares the storage folder, and loads the available database files.</p>
+				</article>
+			</div>
+			<div class="code-grid compact">
+				<article class="code-panel">
+					<div class="panel-header">
+						<span>Install</span>
+						<button class="copy-button small" type="button" data-copy="npm install @decaded/nyadb">Copy</button>
+					</div>
+					<pre><code>npm install @decaded/nyadb</code></pre>
+				</article>
+				<article class="code-panel">
+					<div class="panel-header">
+						<span>Initialize</span>
+						<button class="copy-button small" type="button" data-copy-target="initialize-code">Copy</button>
+					</div>
+					<pre><code id="initialize-code">const NyaDB = require('@decaded/nyadb');
+const nyadb = new NyaDB();</code></pre>
+				</article>
+			</div>
+		</section>
+
+		<section class="quickstart" id="quickstart">
+			<div class="section-heading">
+				<p class="eyebrow">Quick start</p>
+				<h2>Readable JSON, direct methods.</h2>
+			</div>
+			<div class="code-grid">
+				<article class="code-panel">
+					<div class="panel-header">
+						<span>index.js</span>
+						<button class="copy-button small" type="button" data-copy-target="quickstart-code">Copy</button>
+					</div>
+					<pre><code id="quickstart-code">const NyaDB = require('@decaded/nyadb');
+const nyadb = new NyaDB();
+
+nyadb.create('users');
+nyadb.set('users', {
+	ada: { role: 'admin', active: true },
+	linus: { role: 'maintainer', active: true },
+});
+
+console.log(nyadb.get('users'));</code></pre>
+				</article>
+				<article class="code-panel">
+					<div class="panel-header">
+						<span>NyaDB/users.json</span>
+					</div>
+					<pre><code>{
+	"ada": {
+		"role": "admin",
+		"active": true
+	},
+	"linus": {
+		"role": "maintainer",
+		"active": true
+	}
+}</code></pre>
+				</article>
+			</div>
+		</section>
+
+		<section class="tutorial" id="tutorial">
+			<div class="section-heading">
+				<p class="eyebrow">Tutorial</p>
+				<h2>Build a tiny database flow.</h2>
+			</div>
+			<div class="tutorial-grid">
+				<article class="tutorial-step">
+					<span>01</span>
+					<h3>Create a database</h3>
+					<p><code>create</code> returns <code>true</code> when the database is created and <code>false</code> if it already exists or fails validation.</p>
+					<pre><code>nyadb.create('test');</code></pre>
+				</article>
+				<article class="tutorial-step">
+					<span>02</span>
+					<h3>Insert JSON data</h3>
+					<p>Use plain serializable objects. With validation enabled, circular data is rejected before it can be written.</p>
+					<pre><code>const mockDatabase = {
+	yellow: ['banana', 'citrus'],
+	red: ['apple', 'paprika'],
+};
+
+nyadb.set('test', mockDatabase);</code></pre>
+				</article>
+				<article class="tutorial-step">
+					<span>03</span>
+					<h3>Read it back</h3>
+					<p><code>get</code> returns the object for an existing database, while <code>getList</code> returns every database name.</p>
+					<pre><code>nyadb.get('test');
+// {
+//   yellow: ['banana', 'citrus'],
+//   red: ['apple', 'paprika'],
+// }
+
+nyadb.getList();
+// ['test']</code></pre>
+				</article>
+				<article class="tutorial-step">
+					<span>04</span>
+					<h3>Check existence</h3>
+					<p><code>exists</code> returns <code>true</code> when the database file is available and <code>false</code> otherwise.</p>
+					<pre><code>if (nyadb.exists('test')) {
+	console.log('Database exists!');
+}</code></pre>
+				</article>
+				<article class="tutorial-step">
+					<span>05</span>
+					<h3>Clear or rename</h3>
+					<p><code>clear</code> keeps the file and resets it to <code>{}</code>. <code>rename</code> returns <code>false</code> if the source is missing or the destination exists.</p>
+					<pre><code>nyadb.clear('test');
+nyadb.rename('test', 'newName');</code></pre>
+				</article>
+				<article class="tutorial-step">
+					<span>06</span>
+					<h3>Delete when done</h3>
+					<p><code>delete</code> removes the database file and returns whether the operation succeeded.</p>
+					<pre><code>nyadb.delete('test');</code></pre>
+				</article>
+			</div>
+		</section>
+
+		<section class="playground" id="playground">
+			<div class="section-heading">
+				<p class="eyebrow">Playground</p>
+				<h2>Tap the API and watch the file state change.</h2>
+			</div>
+			<div class="playground-layout">
+				<div class="method-board" aria-label="Interactive NyaDB methods">
+					<button type="button" data-demo-action="create">create('users')</button>
+					<button type="button" data-demo-action="set">set('users', data)</button>
+					<button type="button" data-demo-action="add">set('users', more)</button>
+					<button type="button" data-demo-action="size">size('users')</button>
+					<button type="button" data-demo-action="clear">clear('users')</button>
+					<button type="button" data-demo-action="rename">rename('users')</button>
+					<button type="button" data-demo-action="reset">Restore demo data</button>
+				</div>
+				<div class="demo-output">
+					<div class="panel-header">
+						<span id="demo-title">NyaDB/users.json</span>
+						<strong id="demo-status">ready</strong>
+					</div>
+					<pre><code id="demo-json"></code></pre>
+				</div>
+			</div>
+		</section>
+
+		<section class="api" id="api">
+			<div class="section-heading">
+				<p class="eyebrow">API</p>
+				<h2>Small surface, predictable behavior.</h2>
+			</div>
+			<div class="api-grid">
+				<article>
+					<h3>create(name)</h3>
+					<p>Creates a database file when it does not already exist.</p>
+				</article>
+				<article>
+					<h3>set(name, data)</h3>
+					<p>Writes JSON data and batches rapid updates with the debounce setting.</p>
+				</article>
+				<article>
+					<h3>get(name)</h3>
+					<p>Returns the database object, or <code>false</code> when the name is missing.</p>
+				</article>
+				<article>
+					<h3>getList()</h3>
+					<p>Lists available database names from the project-local NyaDB folder.</p>
+				</article>
+				<article>
+					<h3>size(name)</h3>
+					<p>Reports bytes and formatted file sizes for one, many, or all databases.</p>
+				</article>
+				<article>
+					<h3>sizeStatus(name)</h3>
+					<p>Returns status labels such as <code>ok</code>, <code>warning</code>, and <code>critical</code>.</p>
+				</article>
+				<article>
+					<h3>clear(name)</h3>
+					<p>Preserves the file while resetting the database contents to <code>{}</code>.</p>
+				</article>
+				<article>
+					<h3>rename(oldName, newName)</h3>
+					<p>Moves a database to a new valid name when that destination is free.</p>
+				</article>
+				<article>
+					<h3>delete(name)</h3>
+					<p>Deletes an existing database file and returns <code>false</code> when it cannot be removed.</p>
+				</article>
+				<article>
+					<h3>exists(name)</h3>
+					<p>Checks whether a database is currently loaded by name.</p>
+				</article>
+			</div>
+		</section>
+
+		<section class="sizes" id="sizes">
+			<div class="section-heading">
+				<p class="eyebrow">Sizes</p>
+				<h2>Inspect storage before it surprises you.</h2>
+			</div>
+			<div class="code-grid">
+				<article class="code-panel">
+					<div class="panel-header">
+						<span>Size checks</span>
+						<button class="copy-button small" type="button" data-copy-target="size-code">Copy</button>
+					</div>
+					<pre><code id="size-code">const size = nyadb.size('test');
+console.log(size);
+// { name: 'test', bytes: 1234, formatted: '1.21 KB' }
+
+const sizes = nyadb.size(['test', 'users']);
+console.log(sizes.total.formatted);
+console.log(sizes.databases.test.formatted);
+
+const allSizes = nyadb.size();
+console.log(allSizes.databases);</code></pre>
+				</article>
+				<article class="code-panel">
+					<div class="panel-header">
+						<span>Status checks</span>
+						<button class="copy-button small" type="button" data-copy-target="status-code">Copy</button>
+					</div>
+					<pre><code id="status-code">const status = nyadb.sizeStatus('test');
+console.log(status);
+// {
+//   name: 'test',
+//   bytes: 1234,
+//   formatted: '1.21 KB',
+//   percentOfLimit: 0.01,
+//   status: 'ok'
+// }
+
+const allStatuses = nyadb.sizeStatus();
+console.log(allStatuses.total.status);
+// 'ok', 'warning', 'grace', 'critical', or 'unknown'</code></pre>
+				</article>
+			</div>
+		</section>
+
+		<section class="config" id="config">
+			<div class="section-heading">
+				<p class="eyebrow">Configuration</p>
+				<h2>Security-minded defaults, adjustable when needed.</h2>
+			</div>
+			<div class="table-wrap">
+				<table>
+					<thead>
+						<tr>
+							<th>Setting</th>
+							<th>Default</th>
+							<th>Options</th>
+							<th>Purpose</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr>
+							<td><code>formattingEnabled</code></td>
+							<td><code>true</code></td>
+							<td><code>false</code></td>
+							<td>Enables or disables formatting of stored JSON output.</td>
+						</tr>
+						<tr>
+							<td><code>formattingStyle</code></td>
+							<td><code>tab</code></td>
+							<td><code>space</code></td>
+							<td>Chooses tab or space indentation for stored JSON.</td>
+						</tr>
+						<tr>
+							<td><code>indentSize</code></td>
+							<td><code>4</code></td>
+							<td>Any non-negative integer</td>
+							<td>Sets space indentation size when <code>formattingStyle</code> is <code>space</code>.</td>
+						</tr>
+						<tr>
+							<td><code>encoding</code></td>
+							<td><code>utf8</code></td>
+							<td>Any valid Node.js encoding</td>
+							<td>Controls file input and output encoding.</td>
+						</tr>
+						<tr>
+							<td><code>enableConsoleLogs</code></td>
+							<td><code>false</code></td>
+							<td><code>true</code></td>
+							<td>Enables console logging. Errors are logged regardless of this setting.</td>
+						</tr>
+						<tr>
+							<td><code>logLevel</code></td>
+							<td><code>warn</code></td>
+							<td><code>error</code>, <code>warn</code>, <code>info</code>, <code>debug</code></td>
+							<td>Filters console output when logs are enabled. Priority is error, warn, info, debug.</td>
+						</tr>
+						<tr>
+							<td><code>validateInput</code></td>
+							<td><code>true</code></td>
+							<td><code>false</code></td>
+							<td>Validates names and data before file operations.</td>
+						</tr>
+						<tr>
+							<td><code>useAtomicWrites</code></td>
+							<td><code>true</code></td>
+							<td><code>false</code></td>
+							<td>Writes through a temporary file before rename.</td>
+						</tr>
+						<tr>
+							<td><code>maxFileSize</code></td>
+							<td><code>100</code></td>
+							<td>Any non-negative integer</td>
+							<td>Tracks file usage against a megabyte limit.</td>
+						</tr>
+						<tr>
+							<td><code>writeDebounce</code></td>
+							<td><code>10</code></td>
+							<td>Any non-negative integer</td>
+							<td>Batches rapid write operations in milliseconds.</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+			<div class="code-grid compact">
+				<article class="code-panel">
+					<div class="panel-header">
+						<span>Custom configuration</span>
+						<button class="copy-button small" type="button" data-copy-target="config-code">Copy</button>
+					</div>
+					<pre><code id="config-code">const nyadb = new NyaDB({
+	formattingStyle: 'space',
+	indentSize: 5,
+	enableConsoleLogs: true,
+	logLevel: 'info',
+});</code></pre>
+				</article>
+				<article class="note-panel">
+					<h3>Configuration notes</h3>
+					<p>Changes apply when the instance initializes. To return to the default values, remove the setting from your config object.</p>
+					<p><code>useAtomicWrites</code> requires <code>validateInput: true</code>. Setting atomic writes to true while validation is false throws a configuration error.</p>
+				</article>
+			</div>
+		</section>
+
+		<section class="security" id="security">
+			<div class="section-heading">
+				<p class="eyebrow">Security</p>
+				<h2>Version 5 enables protection by default.</h2>
+			</div>
+			<div class="code-grid">
+				<article class="code-panel">
+					<div class="panel-header">
+						<span>Recommended</span>
+						<button class="copy-button small" type="button" data-copy-target="secure-code">Copy</button>
+					</div>
+					<pre><code id="secure-code">const nyadb = new NyaDB();
+// validateInput: true
+// useAtomicWrites: true</code></pre>
+				</article>
+				<article class="code-panel warning-panel">
+					<div class="panel-header">
+						<span>Last resort only</span>
+						<button class="copy-button small" type="button" data-copy-target="unsafe-code">Copy</button>
+					</div>
+					<pre><code id="unsafe-code">const nyadb = new NyaDB({
+	validateInput: false,
+	useAtomicWrites: false,
+});</code></pre>
+				</article>
+			</div>
+			<div class="callout">
+				<strong>Security warning</strong>
+				<p>Disabling <code>validateInput</code> may expose your application to path traversal vulnerabilities. Only disable it when you fully control every database name.</p>
+			</div>
+		</section>
+
+		<section class="migration" id="migration">
+			<div class="section-heading">
+				<p class="eyebrow">Migration</p>
+				<h2>Upgrade cleanly from older versions.</h2>
+			</div>
+			<div class="migration-grid">
+				<article>
+					<h3>From v4.0.0 to v5.0.0</h3>
+					<p>Version 5.0.0 is a major release. <code>validateInput</code> and <code>useAtomicWrites</code> now default to <code>true</code>.</p>
+					<p>Valid names using letters, numbers, dots, dashes, or underscores continue to work without changes.</p>
+				</article>
+				<article>
+					<h3>Invalid database names</h3>
+					<p>Names with path separators or parent directory references should be renamed. For example, replace <code>../data/users</code> with <code>users</code>.</p>
+					<p>If those old JSON files already exist and you want to keep using them, move them manually into the project <code>NyaDB</code> folder with the new valid file names.</p>
+					<pre><code>// Before
+nyadb.create('../data/users');
+
+// After
+nyadb.create('users');</code></pre>
+				</article>
+				<article>
+					<h3>From v3.x or earlier</h3>
+					<p>NyaDB version 4+ stores each database as its own JSON file. Older <code>database.json</code> storage is automatically split into multiple files.</p>
+					<p>This migration is one-way. The original file is backed up as <code>database_backup.json</code> inside the <code>NyaDB</code> folder, but creating your own backup before upgrading is recommended.</p>
+				</article>
+			</div>
+		</section>
+	</main>
+
+	<footer class="site-footer">
+		<p>MIT licensed. Built for small Node.js projects that want plain JSON on disk.</p>
+		<div>
+			<a href="https://www.npmjs.com/package/@decaded/nyadb">npm</a>
+			<a href="https://ko-fi.com/decaded">Ko-fi</a>
+			<a href="https://github.com/Decaded/NyaDB/issues">Issues</a>
+			<a href="https://github.com/Decaded/NyaDB/blob/master/LICENSE.md">License</a>
+		</div>
+	</footer>
+
+	<script src="app.js"></script>
+</body>
+</html>
