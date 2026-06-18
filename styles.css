@@ -422,8 +422,10 @@ h3 {
 
 .signal-strip,
 .install,
+.use-cases,
 .quickstart,
 .tutorial,
+.recipes,
 .playground,
 .api,
 .sizes,
@@ -464,6 +466,12 @@ h3 {
 	gap: 1rem;
 }
 
+.recipe-grid {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 1rem;
+}
+
 .code-grid.compact {
 	margin-top: 1rem;
 }
@@ -473,6 +481,7 @@ h3 {
 .note-panel,
 .tutorial-step,
 .info-grid article,
+.fit-grid article,
 .migration-grid article {
 	border: 1px solid var(--line);
 	border-radius: var(--radius);
@@ -502,6 +511,10 @@ h3 {
 	min-height: 7.5rem;
 }
 
+.recipe-grid .code-panel pre {
+	min-height: 15rem;
+}
+
 .note-panel {
 	padding: 1rem;
 }
@@ -515,6 +528,7 @@ h3 {
 
 .info-grid,
 .tutorial-grid,
+.fit-grid,
 .migration-grid {
 	display: grid;
 	gap: 1rem;
@@ -525,7 +539,12 @@ h3 {
 	margin-bottom: 1rem;
 }
 
+.fit-grid {
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .info-grid article,
+.fit-grid article,
 .tutorial-step,
 .migration-grid article {
 	padding: 1rem;
@@ -540,6 +559,14 @@ h3 {
 .tutorial-step p,
 .migration-grid p {
 	margin-bottom: 0;
+	color: var(--muted);
+}
+
+.fit-grid ul {
+	display: grid;
+	gap: 0.6rem;
+	margin: 0;
+	padding-left: 1.2rem;
 	color: var(--muted);
 }
 
@@ -753,8 +780,10 @@ th {
 
 	.hero,
 	.code-grid,
+	.recipe-grid,
 	.playground-layout,
 	.info-grid,
+	.fit-grid,
 	.tutorial-grid,
 	.migration-grid {
 		grid-template-columns: 1fr;
@@ -796,7 +825,9 @@ th {
 	.file-stack,
 	.signal-strip,
 	.api-grid,
+	.recipe-grid,
 	.info-grid,
+	.fit-grid,
 	.tutorial-grid,
 	.migration-grid {
 		grid-template-columns: 1fr;

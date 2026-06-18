@@ -4,7 +4,16 @@
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<meta name="description" content="NyaDB is a simple JSON database package for Node.js with validation, atomic writes, size checks, and TypeScript types.">
+	<meta property="og:title" content="NyaDB - Simple JSON Databases for Node.js">
+	<meta property="og:description" content="A tiny file-backed JSON database for Node.js projects that want readable files, simple methods, validation, and atomic writes.">
+	<meta property="og:type" content="website">
+	<meta property="og:url" content="https://decaded.github.io/NyaDB/">
+	<meta name="twitter:card" content="summary">
+	<meta name="twitter:title" content="NyaDB - Simple JSON Databases for Node.js">
+	<meta name="twitter:description" content="Readable project-local JSON storage with validation, atomic writes, size checks, and TypeScript types.">
+	<meta name="theme-color" content="#0f766e">
 	<title>NyaDB - Simple JSON Databases for Node.js</title>
+	<link rel="icon" href="favicon.svg" type="image/svg+xml">
 	<script>
 		(function () {
 			var savedTheme = localStorage.getItem('nyadb-theme') || 'system';
@@ -23,10 +32,11 @@
 		</a>
 		<nav class="top-nav" aria-label="Primary">
 			<a href="#install">Install</a>
+			<a href="#use-cases">Use cases</a>
+			<a href="#recipes">Recipes</a>
 			<a href="#playground">Playground</a>
 			<a href="#api">API</a>
 			<a href="#config">Config</a>
-			<a href="#migration">Migration</a>
 		</nav>
 		<div class="theme-switcher" aria-label="Theme">
 			<button class="theme-option" type="button" data-theme-choice="system">System</button>
@@ -55,6 +65,7 @@
 				<div class="hero-actions">
 					<a class="primary-action" href="#quickstart">Quick Start</a>
 					<a class="secondary-action" href="https://github.com/Decaded/NyaDB">GitHub</a>
+					<a class="secondary-action" href="https://github.com/Decaded/NyaDB/issues">Issues</a>
 				</div>
 			</div>
 
@@ -141,6 +152,33 @@
 					</div>
 					<pre><code id="initialize-code">const NyaDB = require('@decaded/nyadb');
 const nyadb = new NyaDB();</code></pre>
+				</article>
+			</div>
+		</section>
+
+		<section class="use-cases" id="use-cases">
+			<div class="section-heading">
+				<p class="eyebrow">Use cases</p>
+				<h2>Use NyaDB when local JSON is the right shape.</h2>
+			</div>
+			<div class="fit-grid">
+				<article>
+					<h3>Good fit</h3>
+					<ul>
+						<li>Small bots, scripts, CLI tools, and prototypes.</li>
+						<li>Project-local settings, feature flags, and lightweight caches.</li>
+						<li>Readable JSON files you may inspect or edit by hand.</li>
+						<li>Apps that want simple methods without running a database server.</li>
+					</ul>
+				</article>
+				<article>
+					<h3>Reach for something else</h3>
+					<ul>
+						<li>Large production datasets with complex queries or indexes.</li>
+						<li>High-write workloads where many processes write at the same time.</li>
+						<li>Shared remote storage, replication, or multi-user transactional data.</li>
+						<li>Data that needs database-level access control or advanced migrations.</li>
+					</ul>
 				</article>
 			</div>
 		</section>
@@ -241,6 +279,54 @@ nyadb.rename('test', 'newName');</code></pre>
 					<h3>Delete when done</h3>
 					<p><code>delete</code> removes the database file and returns whether the operation succeeded.</p>
 					<pre><code>nyadb.delete('test');</code></pre>
+				</article>
+			</div>
+		</section>
+
+		<section class="recipes" id="recipes">
+			<div class="section-heading">
+				<p class="eyebrow">Recipes</p>
+				<h2>Common patterns you can paste into a small project.</h2>
+			</div>
+			<div class="recipe-grid">
+				<article class="code-panel">
+					<div class="panel-header">
+						<span>User settings</span>
+						<button class="copy-button small" type="button" data-copy-target="settings-recipe">Copy</button>
+					</div>
+					<pre><code id="settings-recipe">nyadb.create('settings');
+nyadb.set('settings', {
+	theme: 'dark',
+	notifications: true,
+});
+
+const settings = nyadb.get('settings');</code></pre>
+				</article>
+				<article class="code-panel">
+					<div class="panel-header">
+						<span>Feature flags</span>
+						<button class="copy-button small" type="button" data-copy-target="flags-recipe">Copy</button>
+					</div>
+					<pre><code id="flags-recipe">nyadb.create('features');
+nyadb.set('features', {
+	newDashboard: false,
+	betaTools: true,
+});
+
+const flags = nyadb.get('features');</code></pre>
+				</article>
+				<article class="code-panel">
+					<div class="panel-header">
+						<span>Local cache</span>
+						<button class="copy-button small" type="button" data-copy-target="cache-recipe">Copy</button>
+					</div>
+					<pre><code id="cache-recipe">nyadb.create('cache');
+nyadb.set('cache', {
+	usersUpdatedAt: Date.now(),
+	users: [],
+});
+
+const status = nyadb.sizeStatus('cache');</code></pre>
 				</article>
 			</div>
 		</section>
@@ -529,6 +615,7 @@ nyadb.create('users');</code></pre>
 		<p>MIT licensed. Built for small Node.js projects that want plain JSON on disk.</p>
 		<div>
 			<a href="https://www.npmjs.com/package/@decaded/nyadb">npm</a>
+			<a href="https://github.com/Decaded/NyaDB">GitHub</a>
 			<a href="https://ko-fi.com/decaded">Ko-fi</a>
 			<a href="https://github.com/Decaded/NyaDB/issues">Issues</a>
 			<a href="https://github.com/Decaded/NyaDB/blob/master/LICENSE.md">License</a>
