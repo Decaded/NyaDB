@@ -500,6 +500,24 @@ h3 {
 	overflow-wrap: anywhere;
 }
 
+#demo-status {
+	min-width: 4rem;
+	padding: 0.18rem 0.5rem;
+	border-radius: 999px;
+	background: var(--accent-soft);
+	color: var(--accent-strong);
+	font-variant-numeric: tabular-nums;
+	text-align: center;
+}
+
+.demo-result {
+	padding: 0.85rem 1rem;
+	border-bottom: 1px solid var(--line);
+	background: color-mix(in srgb, var(--accent-soft), transparent 45%);
+	color: var(--accent-strong);
+	font-weight: 800;
+}
+
 .code-panel pre,
 .demo-output pre {
 	min-height: 20rem;

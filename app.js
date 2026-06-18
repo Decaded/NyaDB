@@ -6,6 +6,7 @@ const storedTheme = localStorage.getItem('nyadb-theme') || 'system';
 
 const demoTitle = document.querySelector('#demo-title');
 const demoStatus = document.querySelector('#demo-status');
+const demoResult = document.querySelector('#demo-result');
 const demoJson = document.querySelector('#demo-json');
 const heroJson = document.querySelector('#hero-json');
 const heroSize = document.querySelector('#hero-size');
@@ -161,10 +162,35 @@ function setActiveButton(action) {
 	});
 }
 
+function getDemoMessage(status, action) {
+	if (action === 'size') {
+		return `size('${demoName}') returned ${status}.`;
+	}
+
+	if (action === 'create') {
+		return `create('${demoName}') created an empty JSON database.`;
+	}
+
+	if (action === 'set' || action === 'add') {
+		return `set('${demoName}', data) saved the JSON shown below.`;
+	}
+
+	if (action === 'clear') {
+		return `clear('${demoName}') kept the file and reset its contents to {}.`;
+	}
+
+	if (action === 'rename') {
+		return `rename() changed the active file to ${demoName}.json.`;
+	}
+
+	return 'Ready to run a method.';
+}
+
 function renderDemo(status, action) {
 	const json = getFormattedJson(demoData);
 	demoTitle.textContent = `NyaDB/${demoName}.json`;
 	demoStatus.textContent = status;
+	demoResult.textContent = getDemoMessage(status, action);
 	demoJson.innerHTML = highlightSource(json, 'json');
 	heroJson.innerHTML = highlightSource(json, 'json');
 	heroSize.textContent = getSizeLabel(demoData);
