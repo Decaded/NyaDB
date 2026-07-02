@@ -220,8 +220,10 @@ module.exports = class NyaDB {
 			}
 
 			if (!Object.prototype.hasOwnProperty.call(this.database, name)) {
-				log('Set Database', 'Database does not exist:', name);
-				return false;
+				const error = new Error(`Cannot set database '${name}': Database does not exist. ` + `Call create('${name}') first.`);
+				error.isCritical = false;
+				log('Error', error.message);
+				throw error;
 			}
 
 			return this.scheduleAction('set', name, data);
@@ -237,8 +239,9 @@ module.exports = class NyaDB {
 
 	/**
 	 * Returns the database object for the provided name, or false if it doesn't exist.
+	 * Includes any pending writes from debounced set() operations.
 	 * @param {string} name - The name of the database to retrieve.
-	 * @returns {object|false} The database object, or false if not found.
+	 * @returns {object|false} The database object (with pending writes merged), or false if not found.
 	 * @example
 	 * const users = nyadb.get('users');
 	 * if (users) {
@@ -248,6 +251,11 @@ module.exports = class NyaDB {
 	get(name) {
 		this.applyConfig();
 		if (Object.prototype.hasOwnProperty.call(this.database, name)) {
+			// Merge pending writes from debounced set() operations
+			const pending = this.pendingSetOperations[name];
+			if (pending) {
+				return { ...this.database[name], ...pending };
+			}
 			return this.database[name];
 		} else {
 			return false;

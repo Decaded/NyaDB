@@ -141,7 +141,7 @@ You can customize the behavior of the application by modifying the following set
 | indentSize        | 4             | Any non-negative integer                | Specify the number of spaces for indentation. Only applicable if `formattingStyle` is set to `space`.                                                                       |
 | encoding          | utf8          | Any valid encoding supported by Node.js | Specify the encoding for file input/output operations.                                                                                                                      |
 | enableConsoleLogs | false         | true                                    | Enable or disable logging output to the console. Errors will be logged regardless of this setting.                                                                          |
-| logLevel          | warn          | error, warn, info, debug                | Log level for filtering log messages. Only affects logs when `enableConsoleLogs` is true. The log priority is: `error` > `warn` > `info` > `debug`                                  |
+| logLevel          | warn          | error, warn, info, debug                | Log level for filtering log messages. Only affects logs when `enableConsoleLogs` is true. The log priority is: `error` > `warn` > `info` > `debug`                          |
 | validateInput     | true          | false                                   | Enable input validation for database names and data. Prevents path traversal and validates data integrity.                                                                  |
 | useAtomicWrites   | true          | false                                   | Enable atomic write operations using temp file + rename pattern. Requires `validateInput: true` (throws error if not met). Prevents possible data corruption during writes. |
 | maxFileSize       | 100           | Any non-negative integer                | Maximum file size in megabytes. Warns at 80%, grace threshold at 99%, saves the latest write at 100%, then raises a critical error so the app can stop cleanly.             |
@@ -190,7 +190,6 @@ Version 5.0.0 is a **major release** with breaking changes.
 #### Breaking Changes
 
 1. **`validateInput` defaults to `true`**
-
    - Database names are validated by default
    - Path traversal attempts are blocked
    - Invalid characters in database names will cause operations to fail
@@ -220,6 +219,64 @@ const nyadb = new NyaDB({
 ```
 
 **⚠ Important:** If you disable `validateInput`, you must also set `useAtomicWrites: false`. Attempting to enable atomic writes without validation will throw a configuration error.
+
+### Upgrading from v5.0.x to v6.0.0
+
+Version 6.0.0 is a **major release** with a breaking change.
+
+#### Breaking Changes
+
+1. **`set()` now throws an error instead of returning `false`**
+   - **Before (v5.0.x):**
+
+     ```js
+     const result = nyadb.set('nonexistent', { data: 'test' });
+     if (!result) {
+     	console.log('Set failed'); // Silent failure, debug log only
+     }
+     ```
+
+   - **After (v6.0.0):**
+     ```js
+     try {
+     	nyadb.set('nonexistent', { data: 'test' });
+     } catch (err) {
+     	console.error(err.message);
+     	// "Cannot set database 'nonexistent': Database does not exist. Call create('nonexistent') first."
+     }
+     ```
+
+#### Migration Steps
+
+**Option 1: Ensure databases are created first (recommended)**
+
+```js
+// Always create the database before setting data
+nyadb.create('mydb');
+nyadb.set('mydb', { key: 'value' }); // Will work
+```
+
+**Option 2: Handle errors with try-catch**
+
+```js
+try {
+	nyadb.set('mydb', { key: 'value' });
+} catch (err) {
+	console.error('Failed to set database:', err.message);
+	// Handle the error appropriately
+}
+```
+
+**Option 3: Check if database exists first**
+
+```js
+if (nyadb.exists('mydb')) {
+	nyadb.set('mydb', { key: 'value' });
+} else {
+	nyadb.create('mydb');
+	nyadb.set('mydb', { key: 'value' });
+}
+```
 
 ### Compatibility with previous versions
 

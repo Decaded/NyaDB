@@ -577,6 +577,27 @@ async function runTests() {
 		failedTests++;
 	}
 
+	// Test 19a: Get returns pending writes during debounce
+	try {
+		const db = new NyaDB({ writeDebounce: 50 });
+		db.create(TEST_DB_NAME);
+		await wait();
+		db.set(TEST_DB_NAME, { value: 'initial' });
+
+		// Check get() immediately (during debounce, before flush)
+		const pendingResult = db.get(TEST_DB_NAME);
+		assert.strictEqual(pendingResult.value, 'initial', 'get() should return pending writes during debounce');
+
+		await wait(100); // Wait for debounce to complete
+		const finalResult = db.get(TEST_DB_NAME);
+		assert.strictEqual(finalResult.value, 'initial', 'get() should still have the value after flush');
+		console.log('✓ Test 19a: Get returns pending writes during debounce');
+		passedTests++;
+	} catch (err) {
+		console.error('✗ Test 19a failed:', err.message);
+		failedTests++;
+	}
+
 	// Test 20: Complex nested data structures
 	try {
 		const db = new NyaDB();

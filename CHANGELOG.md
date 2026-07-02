@@ -4,6 +4,25 @@ All notable changes to the project will be documented in this file.
 
 ---
 
+## [6.0.0](https://www.npmjs.com/package/@decaded/nyadb/v/6.0.0) (2026-07-03)
+
+### ⚠ Breaking Changes
+
+- **`set()` now throws an error instead of returning false** when the database doesn't exist:
+  - Previously: `db.set('nonexistent', data)` returned `false` silently (or with debug logging only)
+  - Now: throws `Error: Cannot set database 'nonexistent': Database does not exist. Call create('nonexistent') first.`
+  - **Migration:** If you were checking the return value, wrap the call in a try-catch; if you weren't checking it, ensure `create()` is called before `set()`
+
+### Fixed
+
+- `get()` now returns consistent data including any pending debounced writes from recent `set()` calls (reads immediately after `set()` no longer return stale data)
+
+## [5.0.1](https://www.npmjs.com/package/@decaded/nyadb/v/5.0.1) (2026-06-08)
+
+### Fixed
+
+- IntelliSense now correctly displays JSDoc comments for all methods and properties
+
 ## [5.0.0](https://www.npmjs.com/package/@decaded/nyadb/v/5.0.0) (2026-06-08)
 
 ### ⚠ Breaking Changes
