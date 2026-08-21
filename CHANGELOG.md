@@ -4,6 +4,13 @@ All notable changes to the project will be documented in this file.
 
 ---
 
+## [6.1.1](https://www.npmjs.com/package/@decaded/nyadb/v/6.1.1) (2026-08-21)
+
+### Security
+
+- Replaced prototype-sensitive debounce registries with prototype-less objects and safe own-property definitions.
+- Rejected prototype-sensitive database names and used a prototype-less database map while loading database files to prevent prototype pollution.
+
 ## [6.1.0](https://www.npmjs.com/package/@decaded/nyadb/v/6.1.0) (2026-08-21)
 
 ### Fixed
