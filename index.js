@@ -60,8 +60,8 @@ module.exports = class NyaDB {
 		this.database = loadDatabase();
 		this.scheduledActions = [];
 		this.isRunning = false;
-		this.debounceTimers = {};
-		this.pendingSetOperations = {};
+		this.debounceTimers = Object.create(null);
+		this.pendingSetOperations = Object.create(null);
 		this.lastError = null;
 		log('NyaDB Initialized', userConfig);
 	}
@@ -91,7 +91,14 @@ module.exports = class NyaDB {
 			if (!this.pendingSetOperations[name]) {
 				this.pendingSetOperations[name] = {};
 			}
-			Object.assign(this.pendingSetOperations[name], data);
+			Object.keys(data).forEach(key => {
+				Object.defineProperty(this.pendingSetOperations[name], key, {
+					configurable: true,
+					enumerable: true,
+					value: data[key],
+					writable: true,
+				});
+			});
 
 			this.debounceTimers[name] = setTimeout(() => {
 				this.applyConfig();

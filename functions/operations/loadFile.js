@@ -40,7 +40,7 @@ module.exports = function loadFile() {
 	try {
 		const databaseFolderPath = resolveDataRoot();
 		const files = readdirSync(databaseFolderPath).filter(shouldLoadDatabaseFile);
-		const database = {};
+		const database = Object.create(null);
 		const successfullyLoadedFiles = [];
 		const failedFiles = [];
 

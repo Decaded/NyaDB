@@ -98,6 +98,12 @@ function validateDatabaseName(name, rootDir) {
 		throw err;
 	}
 
+	if (trimmed === '__proto__' || trimmed === 'prototype' || trimmed === 'constructor') {
+		const err = new Error('Database name is reserved for JavaScript object properties.');
+		log('Error', 'Validation failed:', err.message);
+		throw err;
+	}
+
 	if (trimmed === 'custom' || trimmed === 'database_backup' || trimmed.includes('.tmp-')) {
 		const err = new Error('Database name is reserved for NyaDB metadata or temporary files.');
 		log('Error', 'Validation failed:', err.message);

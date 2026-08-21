@@ -672,6 +672,23 @@ async function runTests() {
 		failedTests++;
 	}
 
+	// Test 18j: Prototype-sensitive database names cannot pollute Object.prototype
+	try {
+		const db = new NyaDB({ writeDebounce: 25 });
+		const dbName = '__proto__';
+		const pollutedKey = '__nyadb_polluted__';
+
+		delete Object.prototype[pollutedKey];
+		assert.strictEqual(db.create(dbName), false, 'Prototype-sensitive database name should be rejected');
+
+		assert.strictEqual(Object.prototype[pollutedKey], undefined, 'Object.prototype should not be modified');
+		console.log('✓ Test 18j: Prototype-sensitive names do not pollute Object.prototype');
+		passedTests++;
+	} catch (err) {
+		console.error('✗ Test 18j failed:', err.message);
+		failedTests++;
+	}
+
 	// Test 19: Write debouncing (rapid writes)
 	try {
 		const db = new NyaDB({ writeDebounce: 20 });
