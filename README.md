@@ -35,6 +35,8 @@ const nyadb = new NyaDB();
 
 You can pass settings on initialization. [More information below](#configuration-settings).
 
+NyaDB uses one shared instance per process. Repeated `new NyaDB()` calls return that same instance and replace its configuration, so initialize it once where possible.
+
 ### Creating new database
 
 ```js
@@ -49,6 +51,20 @@ const mockDatabase = {
 	red: ['apple', 'paprika'],
 };
 nyadb.set('test', mockDatabase);
+```
+
+`set()` throws when the database does not exist, so create it before writing. With write debouncing enabled, asynchronous write failures can be checked with `getLastError()` after
+the debounce interval.
+
+```js
+try {
+	const saved = nyadb.set('test', mockDatabase);
+	console.log(saved); // true when the write is scheduled
+} catch (error) {
+	console.error(error.message);
+}
+
+const asyncError = nyadb.getLastError();
 ```
 
 ### Retrieving data
@@ -134,18 +150,18 @@ nyadb.delete('test');
 
 You can customize the behavior of the application by modifying the following settings.
 
-| Setting           | Default Value | Optional Values                         | Description                                                                                                                                                                 |
-| ----------------- | ------------- | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| formattingEnabled | true          | false                                   | Enable or disable formatting of output.                                                                                                                                     |
-| formattingStyle   | tab           | space                                   | Choose between using tabs or spaces for indentation.                                                                                                                        |
-| indentSize        | 4             | Any non-negative integer                | Specify the number of spaces for indentation. Only applicable if `formattingStyle` is set to `space`.                                                                       |
-| encoding          | utf8          | Any valid encoding supported by Node.js | Specify the encoding for file input/output operations.                                                                                                                      |
-| enableConsoleLogs | false         | true                                    | Enable or disable logging output to the console. Errors will be logged regardless of this setting.                                                                          |
-| logLevel          | warn          | error, warn, info, debug                | Log level for filtering log messages. Only affects logs when `enableConsoleLogs` is true. The log priority is: `error` > `warn` > `info` > `debug`                          |
-| validateInput     | true          | false                                   | Enable input validation for database names and data. Prevents path traversal and validates data integrity.                                                                  |
-| useAtomicWrites   | true          | false                                   | Enable atomic write operations using temp file + rename pattern. Requires `validateInput: true` (throws error if not met). Prevents possible data corruption during writes. |
-| maxFileSize       | 100           | Any non-negative integer                | Maximum file size in megabytes. Warns at 80%, grace threshold at 99%, saves the latest write at 100%, then raises a critical error so the app can stop cleanly.             |
-| writeDebounce     | 10            | Any non-negative integer                | Debounce delay for write operations in milliseconds. Automatically batches rapid writes for better performance. Set to 0 to disable.                                        |
+| Setting           | Default Value | Optional Values                         | Description                                                                                                                                                                                    |
+| ----------------- | ------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| formattingEnabled | true          | false                                   | Enable or disable formatting of output.                                                                                                                                                        |
+| formattingStyle   | tab           | space                                   | Choose between using tabs or spaces for indentation.                                                                                                                                           |
+| indentSize        | 4             | Any non-negative integer                | Specify the number of spaces for indentation. Only applicable if `formattingStyle` is set to `space`.                                                                                          |
+| encoding          | utf8          | Any valid encoding supported by Node.js | Specify the encoding for file input/output operations.                                                                                                                                         |
+| enableConsoleLogs | false         | true                                    | Enable or disable logging output to the console. Errors will be logged regardless of this setting.                                                                                             |
+| logLevel          | warn          | error, warn, info, debug                | Log level for filtering log messages. Only affects logs when `enableConsoleLogs` is true. The log priority is: `error` > `warn` > `info` > `debug`                                             |
+| validateInput     | true          | false                                   | Enable input validation for database names and data. Prevents path traversal and validates data integrity.                                                                                     |
+| useAtomicWrites   | true          | false                                   | Enable atomic write operations using temp file + rename pattern. Requires `validateInput: true` (throws error if not met). Prevents possible data corruption during writes.                    |
+| maxFileSize       | 100           | Any non-negative integer                | Maximum file size in megabytes. Warns at 80%, grace threshold at 99%, saves the latest write at 100%, then raises a critical error so the app can stop cleanly. Set to `0` for unlimited size. |
+| writeDebounce     | 10            | Any non-negative integer                | Debounce delay for write operations in milliseconds. Automatically batches rapid writes for better performance. Set to 0 to disable.                                                           |
 
 ### Example
 
@@ -278,11 +294,14 @@ if (nyadb.exists('mydb')) {
 }
 ```
 
-### Compatibility with previous versions
+### Deprecated legacy migration
 
-NyaDB version 4+ uses a multi-file storage system, where each database is stored as its own JSON file.
+The automatic migration from the pre-v4 `database.json` format is deprecated. It remains in v6 only for compatibility with existing installations and is scheduled for removal in
+v7.
 
-| ⚠   | **If migrating from version 3.x or earlier**, the system will **automatically detect** an existing `database.json` file and split it into multiple files.                                                                        |
+NyaDB version 4+ uses a multi-file storage system, where each database is stored as its own JSON file. New installations do not need this migration.
+
+| ⚠   | **If migrating from version 3.x or earlier**, v6 will **automatically detect** an existing `database.json` file and split it into multiple files. This compatibility behavior will not exist in v7.                              |
 | --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | ⚠   | **This migration is one-way and cannot be reversed. The original `database.json` file will be backed up as `database_backup.json` in the `NyaDB` folder. However, it's recommended to create your own backup before upgrading.** |
 

@@ -6,6 +6,7 @@ const saveFile = require('../operations/saveFile');
 
 /**
  * Migrates data from the old database.json file to the new file structure.
+ * @deprecated Legacy v3 migration support is retained for v6 compatibility and will be removed in v7.
  * @returns {boolean} - Returns true if migration was successful or not needed, false if migration failed.
  */
 module.exports = function migrateOldData() {

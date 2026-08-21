@@ -13,7 +13,7 @@ module.exports = function setupDatabase() {
 			log('Setup Database', 'Database folder created:', databaseFolderPath);
 		}
 
-		// Migrate old data if necessary
+		// Deprecated legacy migration is retained through v6 and removed in v7.
 		const migrationSuccess = migrateOldData();
 		if (!migrationSuccess) {
 			throw new Error('Database initialization halted due to migration failure.');

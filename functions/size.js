@@ -1,4 +1,4 @@
-const { statSync, existsSync } = require('fs');
+const { lstatSync, existsSync } = require('fs');
 const config = require('../config/config');
 const log = require('./logs/logger');
 const { getDatabaseFilePath, validateDatabaseName } = require('./validation/validateInput');
@@ -16,7 +16,7 @@ function formatBytes(bytes, decimals = 2) {
 	const dm = decimals < 0 ? 0 : decimals;
 	const sizes = ['Bytes', 'KB', 'MB', 'GB'];
 
-	const i = Math.floor(Math.log(bytes) / Math.log(k));
+	const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), 3);
 
 	return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
@@ -39,7 +39,8 @@ function getDatabaseSize(dbName, shouldValidate = true) {
 			return null;
 		}
 
-		const stats = statSync(filePath);
+		const stats = lstatSync(filePath);
+		if (stats.isSymbolicLink()) return null;
 		return {
 			name: dbName,
 			bytes: stats.size,
@@ -96,9 +97,7 @@ function addStatus(sizeInfo) {
 
 function collectSizesForNames(names, database, includeStatus = false) {
 	const shouldValidate = Boolean(names && !(Array.isArray(names) && names.length === 0));
-	const allDatabases = !shouldValidate
-		? Object.keys(database)
-		: names;
+	const allDatabases = !shouldValidate ? Object.keys(database) : [...new Set(names)];
 	const sizes = {};
 	let totalBytes = 0;
 

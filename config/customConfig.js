@@ -30,7 +30,7 @@ function validateConfig(data, allowStorage = false, validateRelationships = true
 		enableConsoleLogs: { type: 'boolean' },
 		validateInput: { type: 'boolean' },
 		useAtomicWrites: { type: 'boolean' },
-		maxFileSize: { type: 'number', minimum: 1 },
+		maxFileSize: { type: 'number', minimum: 0 },
 		writeDebounce: { type: 'number', minimum: 0 },
 		logLevel: { type: 'string', enum: ['error', 'warn', 'info', 'debug'] },
 	};
@@ -59,7 +59,6 @@ function validateConfig(data, allowStorage = false, validateRelationships = true
 			if (minimum !== undefined && value < minimum) {
 				throw new Error(`Invalid configuration: ${key} should be greater than or equal to ${minimum}.`);
 			}
-
 		}
 	}
 

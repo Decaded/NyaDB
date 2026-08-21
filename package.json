@@ -1,6 +1,6 @@
 {
   "name": "@decaded/nyadb",
-  "version": "6.0.0",
+  "version": "6.1.0",
   "description": "Simple JSON \"database\" for NodeJS.",
   "main": "./index.js",
   "types": "./index.d.ts",
@@ -13,7 +13,8 @@
   },
   "scripts": {
     "test": "node tests/tests.js",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
   },
   "files": [
     "CHANGELOG.md",
@@ -43,10 +44,11 @@
     "cache"
   ],
   "devDependencies": {
-    "eslint": "^10.6.0"
+    "eslint": "^10.6.0",
+    "typescript": "^7.0.2"
   },
   "engines": {
-    "node": ">=12.x"
+    "node": "^20.19.0 || ^22.13.0 || >=24"
   },
   "license": "MIT",
   "typings": "./index.d.ts",

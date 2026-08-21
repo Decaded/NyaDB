@@ -4,6 +4,25 @@ All notable changes to the project will be documented in this file.
 
 ---
 
+## [6.1.0](https://www.npmjs.com/package/@decaded/nyadb/v/6.1.0) (2026-08-21)
+
+### Fixed
+
+- Restored the documented v6 behavior where `set()` throws when the database does not exist.
+- Ordered debounced writes with `clear()`, `delete()`, and `rename()` to prevent stale writes from resurrecting or losing data.
+- Exposed asynchronous debounced write failures through `getLastError()` instead of allowing uncaught timer exceptions.
+- Reserved loader metadata and temporary-file names during input validation.
+- Ignored symbolic links while loading databases and calculating database sizes.
+- Corrected the TypeScript declaration to match the package's CommonJS export.
+- Aligned file-size checks with the formatted and encoded representation saved to disk.
+- Prevented duplicate database names from being double-counted in size totals.
+- Defined `maxFileSize: 0` consistently as unlimited.
+- Enforced one shared NyaDB instance per process. Repeated construction reuses the existing instance.
+
+### Deprecated
+
+- Legacy pre-v4 `database.json` migration remains available for v6 compatibility and is scheduled for removal in v7.
+
 ## [6.0.0](https://www.npmjs.com/package/@decaded/nyadb/v/6.0.0) (2026-07-03)
 
 ### ⚠ Breaking Changes

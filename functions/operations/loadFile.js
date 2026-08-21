@@ -1,4 +1,4 @@
-const { readFileSync, readdirSync, statSync } = require('fs');
+const { readFileSync, readdirSync, lstatSync } = require('fs');
 const path = require('path');
 const config = require('../../config/config');
 const log = require('../logs/logger');
@@ -16,7 +16,12 @@ function shouldLoadDatabaseFile(file) {
 function isWithinMaxFileSize(filePath, fileName) {
 	if (!config.maxFileSize) return true;
 
-	const stats = statSync(filePath);
+	const stats = lstatSync(filePath);
+	if (stats.isSymbolicLink()) {
+		log('Error', `Skipping ${fileName}: symbolic links are not supported.`);
+		return false;
+	}
+
 	const limitBytes = Number(config.maxFileSize) * 1024 * 1024;
 
 	if (stats.size >= limitBytes) {
@@ -42,6 +47,12 @@ module.exports = function loadFile() {
 		files.forEach(file => {
 			try {
 				const filePath = path.join(databaseFolderPath, file);
+				if (lstatSync(filePath).isSymbolicLink()) {
+					log('Error', `Skipping ${file}: symbolic links are not supported.`);
+					failedFiles.push({ file, error: 'Symbolic link' });
+					return;
+				}
+
 				if (!isWithinMaxFileSize(filePath, file)) {
 					failedFiles.push({ file, error: 'File too large' });
 					return;

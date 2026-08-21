@@ -47,6 +47,13 @@ module.exports = class NyaDB {
 	 * });
 	 */
 	constructor(userConfig) {
+		if (NyaDB.instance) {
+			NyaDB.instance.userConfig = userConfig ? { ...userConfig } : undefined;
+			NyaDB.instance.applyConfig();
+			return NyaDB.instance;
+		}
+
+		NyaDB.instance = this;
 		this.userConfig = userConfig ? { ...userConfig } : undefined;
 		this.applyConfig();
 		setupDatabase();
@@ -55,6 +62,7 @@ module.exports = class NyaDB {
 		this.isRunning = false;
 		this.debounceTimers = {};
 		this.pendingSetOperations = {};
+		this.lastError = null;
 		log('NyaDB Initialized', userConfig);
 	}
 
@@ -91,9 +99,14 @@ module.exports = class NyaDB {
 				delete this.pendingSetOperations[name];
 				delete this.debounceTimers[name];
 
-				this.scheduledActions.push({ action: 'set', name, data: mergedData });
-				this.scheduledActions.push({ action: 'load' });
-				this.synchronizedScheduler();
+				try {
+					this.scheduledActions.push({ action: 'set', name, data: mergedData });
+					this.scheduledActions.push({ action: 'load' });
+					this.synchronizedScheduler();
+				} catch (error) {
+					this.lastError = error;
+					log('Error', 'Debounced write failed:', error.message || error);
+				}
 			}, config.writeDebounce);
 
 			return true;
@@ -101,6 +114,25 @@ module.exports = class NyaDB {
 
 		this.scheduledActions.push({ action, name, data });
 		return this.synchronizedScheduler();
+	}
+
+	/**
+	 * Reconcile a pending debounced write before a lifecycle operation.
+	 * @param {string} name - The database name.
+	 * @param {boolean} flush - Whether the pending write should be persisted first.
+	 */
+	reconcilePendingSet(name, flush) {
+		if (this.debounceTimers[name]) {
+			clearTimeout(this.debounceTimers[name]);
+			delete this.debounceTimers[name];
+		}
+
+		const pending = this.pendingSetOperations[name];
+		delete this.pendingSetOperations[name];
+
+		if (flush && pending) {
+			this.scheduledActions.push({ action: 'set', name, data: pending });
+		}
 	}
 
 	/**
@@ -112,8 +144,11 @@ module.exports = class NyaDB {
 
 		while (!this.isRunning && this.scheduledActions.length > 0) {
 			this.isRunning = true;
-			result = this.scheduler();
-			this.isRunning = false;
+			try {
+				result = this.scheduler();
+			} finally {
+				this.isRunning = false;
+			}
 		}
 
 		return result;
@@ -192,6 +227,7 @@ module.exports = class NyaDB {
 				return false;
 			}
 
+			this.reconcilePendingSet(name, true);
 			const deleted = this.scheduleAction('delete', name);
 			if (!deleted) return false;
 
@@ -221,7 +257,7 @@ module.exports = class NyaDB {
 
 			if (!Object.prototype.hasOwnProperty.call(this.database, name)) {
 				const error = new Error(`Cannot set database '${name}': Database does not exist. ` + `Call create('${name}') first.`);
-				error.isCritical = false;
+				error.code = 'DATABASE_NOT_FOUND';
 				log('Error', error.message);
 				throw error;
 			}
@@ -229,6 +265,9 @@ module.exports = class NyaDB {
 			return this.scheduleAction('set', name, data);
 		} catch (error) {
 			if (error && error.isCritical) {
+				throw error;
+			}
+			if (error && error.code === 'DATABASE_NOT_FOUND') {
 				throw error;
 			}
 
@@ -272,6 +311,14 @@ module.exports = class NyaDB {
 	getList() {
 		this.applyConfig();
 		return Object.keys(this.database);
+	}
+
+	/**
+	 * Returns the most recent error raised by an asynchronous debounced write.
+	 * @returns {Error|null} The asynchronous write error, if one occurred.
+	 */
+	getLastError() {
+		return this.lastError;
 	}
 
 	/**
@@ -337,6 +384,7 @@ module.exports = class NyaDB {
 				return false;
 			}
 
+			this.reconcilePendingSet(name, false);
 			const cleared = this.scheduleAction('clear', name);
 			if (!cleared) return false;
 
@@ -374,6 +422,7 @@ module.exports = class NyaDB {
 				return false;
 			}
 
+			this.reconcilePendingSet(oldName, true);
 			const renamed = this.scheduleAction('rename', oldName, { newName });
 			if (!renamed) return false;
 

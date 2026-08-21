@@ -98,6 +98,12 @@ function validateDatabaseName(name, rootDir) {
 		throw err;
 	}
 
+	if (trimmed === 'custom' || trimmed === 'database_backup' || trimmed.includes('.tmp-')) {
+		const err = new Error('Database name is reserved for NyaDB metadata or temporary files.');
+		log('Error', 'Validation failed:', err.message);
+		throw err;
+	}
+
 	if (/[ .]$/.test(trimmed)) {
 		const err = new Error('Database name cannot end with a space or dot.');
 		log('Error', 'Validation failed:', err.message);
@@ -264,6 +270,15 @@ function validateData(data) {
 }
 
 /**
+ * Serializes data using the same output settings as saveFile.
+ * @param {object} data - The data to serialize.
+ * @returns {string} The serialized JSON data.
+ */
+function serializeDatabase(data) {
+	return config.formattingEnabled ? JSON.stringify(data, null, config.formattingStyle === 'space' ? ' '.repeat(config.indentSize) : '\t') : JSON.stringify(data);
+}
+
+/**
  * Checks merged data size and enforces limits with warnings and grace margin.
  * @param {string} name - The database name.
  * @param {object} mergedData - The merged data to check.
@@ -280,7 +295,7 @@ function checkMergedDataSize(name, mergedData, maxSizeMB) {
 		};
 	}
 
-	const jsonString = JSON.stringify(mergedData);
+	const jsonString = serializeDatabase(mergedData);
 	const sizeInBytes = Buffer.byteLength(jsonString, encoding);
 	const sizeMB = sizeInBytes / 1024 / 1024;
 	const limitMB = Number(maxSizeMB);
@@ -307,6 +322,7 @@ module.exports = {
 	resolveDataRoot,
 	validateDatabaseName,
 	validateData,
+	serializeDatabase,
 	checkMergedDataSize,
 	safeAtomicWrite,
 };

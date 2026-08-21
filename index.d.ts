@@ -1,179 +1,181 @@
-/**
- * Configuration options for NyaDB.
- */
-interface NyaDBConfig {
+declare namespace NyaDB {
 	/**
-	 * Enable or disable formatting of output.
-	 * @default true
+	 * Configuration options for NyaDB.
 	 */
-	formattingEnabled?: boolean;
-
-	/**
-	 * Choose between using tabs or spaces for indentation.
-	 * @default 'tab'
-	 */
-	formattingStyle?: 'tab' | 'space';
-
-	/**
-	 * Specify the number of spaces for indentation (only applicable if formattingStyle is 'space').
-	 * @default 4
-	 */
-	indentSize?: number;
-
-	/**
-	 * Specify the encoding for file input/output operations.
-	 * @default 'utf8'
-	 */
-	encoding?: string;
-
-	/**
-	 * Enable or disable logging output to the console. Errors will be logged regardless of this setting.
-	 * @default false
-	 */
-	enableConsoleLogs?: boolean;
-
-	/**
-	 * Enable or disable input validation for database names and data.
-	 * Validates database names to prevent path traversal and other security issues.
-	 * Validates data to prevent circular references and ensure serializability.
-	 *
-	 * ⚠️ Security Warning: Disabling this setting may expose your application to path traversal vulnerabilities.
-	 * Only disable if you have complete control over all database names.
-	 *
-	 * @default true
-	 */
-	validateInput?: boolean;
-
-	/**
-	 * Enable atomic write operations using temporary file + rename pattern.
-	 * This prevents data corruption during write operations.
-	 *
-	 * Requires validateInput to be enabled (true).
-	 * Throwing an error if 'validateInput' is false and 'useAtomicWrites' is true.
-	 *
-	 * @default true
-	 */
-	useAtomicWrites?: boolean;
-
-	/**
-	 * Maximum file size in megabytes. Default is 100MB.
-	 * - Warning at 80% of limit
-	 * - Grace threshold at 99% of limit
-	 * - Saves the latest write at 100%, then raises a critical error
-	 * @default 100
-	 */
-	maxFileSize?: number;
-
-	/**
-	 * Debounce delay in milliseconds for write operations. Set to 0 to disable.
-	 * @default 10
-	 */
-	writeDebounce?: number;
-
-	/**
-	 * Log level for filtering log messages.
-	 * @default 'warn'
-	 */
-	logLevel?: 'error' | 'warn' | 'info' | 'debug';
-}
-
-/**
- * Size information for a single database.
- */
-interface DatabaseSize {
-	/**
-	 * The name of the database.
-	 */
-	name: string;
-
-	/**
-	 * The size of the database file in bytes.
-	 */
-	bytes: number;
-
-	/**
-	 * Human-readable formatted size (e.g., "1.21 KB", "5.5 MB").
-	 */
-	formatted: string;
-}
-
-/**
- * Size information with usage status against maxFileSize.
- */
-interface DatabaseSizeStatus extends DatabaseSize {
-	/**
-	 * Percentage of maxFileSize used, or null if no limit is configured.
-	 */
-	percentOfLimit: number | null;
-
-	/**
-	 * Status based on maxFileSize thresholds.
-	 */
-	status: 'ok' | 'warning' | 'grace' | 'critical' | 'unknown';
-}
-
-/**
- * Size information for multiple databases with totals.
- */
-interface MultipleDatabaseSize {
-	/**
-	 * Object containing size information for each database.
-	 */
-	databases: {
-		[key: string]: DatabaseSize;
-	};
-
-	/**
-	 * Total size across all databases.
-	 */
-	total: {
+	interface NyaDBConfig {
 		/**
-		 * Total size in bytes.
+		 * Enable or disable formatting of output.
+		 * @default true
+		 */
+		formattingEnabled?: boolean;
+
+		/**
+		 * Choose between using tabs or spaces for indentation.
+		 * @default 'tab'
+		 */
+		formattingStyle?: 'tab' | 'space';
+
+		/**
+		 * Specify the number of spaces for indentation (only applicable if formattingStyle is 'space').
+		 * @default 4
+		 */
+		indentSize?: number;
+
+		/**
+		 * Specify the encoding for file input/output operations.
+		 * @default 'utf8'
+		 */
+		encoding?: string;
+
+		/**
+		 * Enable or disable logging output to the console. Errors will be logged regardless of this setting.
+		 * @default false
+		 */
+		enableConsoleLogs?: boolean;
+
+		/**
+		 * Enable or disable input validation for database names and data.
+		 * Validates database names to prevent path traversal and other security issues.
+		 * Validates data to prevent circular references and ensure serializability.
+		 *
+		 * ⚠️ Security Warning: Disabling this setting may expose your application to path traversal vulnerabilities.
+		 * Only disable if you have complete control over all database names.
+		 *
+		 * @default true
+		 */
+		validateInput?: boolean;
+
+		/**
+		 * Enable atomic write operations using temporary file + rename pattern.
+		 * This prevents data corruption during write operations.
+		 *
+		 * Requires validateInput to be enabled (true).
+		 * Throwing an error if 'validateInput' is false and 'useAtomicWrites' is true.
+		 *
+		 * @default true
+		 */
+		useAtomicWrites?: boolean;
+
+		/**
+		 * Maximum file size in megabytes. Default is 100MB.
+		 * - Warning at 80% of limit
+		 * - Grace threshold at 99% of limit
+		 * - Saves the latest write at 100%, then raises a critical error
+		 * @default 100
+		 */
+		maxFileSize?: number;
+
+		/**
+		 * Debounce delay in milliseconds for write operations. Set to 0 to disable.
+		 * @default 10
+		 */
+		writeDebounce?: number;
+
+		/**
+		 * Log level for filtering log messages.
+		 * @default 'warn'
+		 */
+		logLevel?: 'error' | 'warn' | 'info' | 'debug';
+	}
+
+	/**
+	 * Size information for a single database.
+	 */
+	interface DatabaseSize {
+		/**
+		 * The name of the database.
+		 */
+		name: string;
+
+		/**
+		 * The size of the database file in bytes.
 		 */
 		bytes: number;
 
 		/**
-		 * Human-readable formatted total size.
+		 * Human-readable formatted size (e.g., "1.21 KB", "5.5 MB").
 		 */
 		formatted: string;
-	};
-}
-
-/**
- * Size status information for multiple databases with totals.
- */
-interface MultipleDatabaseSizeStatus {
-	/**
-	 * Object containing size status information for each database.
-	 */
-	databases: {
-		[key: string]: DatabaseSizeStatus;
-	};
+	}
 
 	/**
-	 * Total size status across all databases.
+	 * Size information with usage status against maxFileSize.
 	 */
-	total: {
+	interface DatabaseSizeStatus extends DatabaseSize {
 		/**
-		 * Total size in bytes.
-		 */
-		bytes: number;
-
-		/**
-		 * Human-readable formatted total size.
-		 */
-		formatted: string;
-
-		/**
-		 * Null because maxFileSize applies per database file, not to combined total storage.
+		 * Percentage of maxFileSize used, or null if no limit is configured.
 		 */
 		percentOfLimit: number | null;
 
 		/**
-		 * Unknown because maxFileSize applies per database file, not to combined total storage.
+		 * Status based on maxFileSize thresholds.
 		 */
 		status: 'ok' | 'warning' | 'grace' | 'critical' | 'unknown';
-	};
+	}
+
+	/**
+	 * Size information for multiple databases with totals.
+	 */
+	interface MultipleDatabaseSize {
+		/**
+		 * Object containing size information for each database.
+		 */
+		databases: {
+			[key: string]: DatabaseSize;
+		};
+
+		/**
+		 * Total size across all databases.
+		 */
+		total: {
+			/**
+			 * Total size in bytes.
+			 */
+			bytes: number;
+
+			/**
+			 * Human-readable formatted total size.
+			 */
+			formatted: string;
+		};
+	}
+
+	/**
+	 * Size status information for multiple databases with totals.
+	 */
+	interface MultipleDatabaseSizeStatus {
+		/**
+		 * Object containing size status information for each database.
+		 */
+		databases: {
+			[key: string]: DatabaseSizeStatus;
+		};
+
+		/**
+		 * Total size status across all databases.
+		 */
+		total: {
+			/**
+			 * Total size in bytes.
+			 */
+			bytes: number;
+
+			/**
+			 * Human-readable formatted total size.
+			 */
+			formatted: string;
+
+			/**
+			 * Null because maxFileSize applies per database file, not to combined total storage.
+			 */
+			percentOfLimit: number | null;
+
+			/**
+			 * Unknown because maxFileSize applies per database file, not to combined total storage.
+			 */
+			status: 'ok' | 'warning' | 'grace' | 'critical' | 'unknown';
+		};
+	}
 }
 
 /**
@@ -182,6 +184,7 @@ interface MultipleDatabaseSizeStatus {
 declare class NyaDB {
 	/**
 	 * Constructs the NyaDB instance and applies the user configuration.
+	 * NyaDB is a process-wide singleton; repeated construction returns the same instance.
 	 *
 	 * @param {NyaDBConfig} userConfig - User configuration to override the default settings.
 	 * @example
@@ -203,7 +206,7 @@ declare class NyaDB {
 	 *   useAtomicWrites: false
 	 * });
 	 */
-	constructor(userConfig?: NyaDBConfig);
+	constructor(userConfig?: NyaDB.NyaDBConfig);
 
 	/**
 	 * Creates a new database with the given name, if it doesn't already exist.
@@ -229,6 +232,7 @@ declare class NyaDB {
 	 * @param {string} name - The name of the database to set.
 	 * @param {object} data - The JSON object to set the database to.
 	 * @returns {boolean} - True if the operation was scheduled successfully, false if validation failed.
+	 * @throws {Error} When the database does not exist.
 	 * @example
 	 * const success = nyadb.set('users', { john: { age: 30, role: 'admin' } });
 	 */
@@ -256,6 +260,12 @@ declare class NyaDB {
 	getList(): string[];
 
 	/**
+	 * Returns the most recent error from an asynchronous debounced write.
+	 * Synchronous writes continue to throw errors directly from set().
+	 */
+	getLastError(): Error | null;
+
+	/**
 	 * Returns the size of one or more databases.
 	 * @param {string | string[]} names - Database name(s) to check. If not provided, returns sizes for all databases.
 	 * @returns {DatabaseSize | MultipleDatabaseSize | null} - Size information for the requested database(s), or null if not found.
@@ -274,14 +284,14 @@ declare class NyaDB {
 	 * const allSizes = nyadb.size();
 	 * console.log(allSizes.databases);
 	 */
-	size(names?: string | string[]): DatabaseSize | MultipleDatabaseSize | null;
+	size(names?: string | string[]): NyaDB.DatabaseSize | NyaDB.MultipleDatabaseSize | null;
 
 	/**
 	 * Returns size information with percent-of-limit and status labels.
 	 * @param {string | string[]} names - Database name(s) to check. If not provided, returns statuses for all databases.
 	 * @returns {DatabaseSizeStatus | MultipleDatabaseSizeStatus | null} - Size status information for the requested database(s), or null if not found.
 	 */
-	sizeStatus(names?: string | string[]): DatabaseSizeStatus | MultipleDatabaseSizeStatus | null;
+	sizeStatus(names?: string | string[]): NyaDB.DatabaseSizeStatus | NyaDB.MultipleDatabaseSizeStatus | null;
 
 	/**
 	 * Checks if a database with the given name exists.
@@ -315,5 +325,4 @@ declare class NyaDB {
 	rename(oldName: string, newName: string): boolean;
 }
 
-export default NyaDB;
-export { NyaDBConfig, DatabaseSize, DatabaseSizeStatus, MultipleDatabaseSize, MultipleDatabaseSizeStatus };
+export = NyaDB;

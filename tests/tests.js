@@ -4,6 +4,8 @@ const os = require('os');
 const path = require('path');
 const NyaDB = require('../index');
 const config = require('../config/config');
+const { serializeDatabase } = require('../functions/validation/validateInput');
+const loadDatabase = require('../functions/loadDatabase');
 
 // Test configuration
 const TEST_PREFIX = '__nyadb_test__';
@@ -141,12 +143,14 @@ async function runTests() {
 
 			process.chdir(tempDir);
 			db = new NyaDB();
+			db.database = loadDatabase();
 		} finally {
 			process.chdir(originalCwd);
 		}
 
 		const list = db.getList();
 		assert.deepStrictEqual(list, [validDbName], 'Only real database files should be loaded');
+		db.database = loadDatabase();
 		removeDirectory(tempDir);
 		console.log('✓ Test 1c: Loader ignores reserved JSON files');
 		passedTests++;
@@ -417,6 +421,46 @@ async function runTests() {
 		failedTests++;
 	}
 
+	// Test 15c: Duplicate names are counted once and large sizes have valid units
+	try {
+		const db = new NyaDB();
+		const dbName = `${TEST_PREFIX}size_unique`;
+		assert.strictEqual(db.create(dbName), true, 'Size test database should be created');
+		await wait();
+		const singleSize = db.size(dbName);
+		const duplicateSize = db.size([dbName, dbName]);
+		assert.strictEqual(duplicateSize.total.bytes, singleSize.bytes, 'Duplicate names should not double-count total size');
+		db.delete(dbName);
+		await wait();
+		console.log('✓ Test 15c: Duplicate names are counted once');
+		passedTests++;
+	} catch (err) {
+		console.error('✗ Test 15c failed:', err.message);
+		failedTests++;
+	}
+
+	// Test 15d: Size checks use the same serialized representation as saved files
+	try {
+		const db = new NyaDB({ formattingEnabled: true, formattingStyle: 'space', indentSize: 2 });
+		const dbName = `${TEST_PREFIX}size_serialization`;
+		const data = { nested: { value: 'serialized' } };
+		assert.strictEqual(db.create(dbName), true, 'Serialization test database should be created');
+		await wait();
+		db.set(dbName, data);
+		await wait();
+		const filePath = path.join(TEST_DB_FOLDER, `${dbName}.json`);
+		const savedBytes = fs.statSync(filePath).size;
+		const expectedBytes = Buffer.byteLength(serializeDatabase(data), config.encoding);
+		assert.strictEqual(savedBytes, expectedBytes, 'Saved file size should match the shared serializer');
+		db.delete(dbName);
+		await wait();
+		console.log('✓ Test 15d: Size checks use the saved representation');
+		passedTests++;
+	} catch (err) {
+		console.error('✗ Test 15d failed:', err.message);
+		failedTests++;
+	}
+
 	// Test 16: Input validation - invalid database name (with validation enabled)
 	try {
 		const db = new NyaDB({ validateInput: true });
@@ -490,35 +534,38 @@ async function runTests() {
 		failedTests++;
 	}
 
-	// Test 18c: Set returns false for missing database
+	// Test 18c: Set throws for missing database
 	try {
 		const db = new NyaDB();
-		const result = db.set('missing_set_target', { a: 1 });
+		let setError;
+		try {
+			db.set('missing_set_target', { a: 1 });
+		} catch (err) {
+			setError = err;
+		}
 		await wait();
 
-		assert.strictEqual(result, false, 'set() should return false for a missing database');
+		assert.ok(setError, 'set() should throw for a missing database');
+		assert.match(setError.message, /Database does not exist/);
 		assert.strictEqual(db.exists('missing_set_target'), false, 'set() should not create a missing database');
-		console.log('✓ Test 18c: Set returns false for missing database');
+		console.log('✓ Test 18c: Set throws for missing database');
 		passedTests++;
 	} catch (err) {
 		console.error('✗ Test 18c failed:', err.message);
 		failedTests++;
 	}
 
-	// Test 18d: Instance configuration is reapplied per operation
+	// Test 18d: Singleton configuration follows the latest initialization
 	if (process.platform !== 'win32') {
 		try {
-			const unsafeDb = new NyaDB({ validateInput: false, useAtomicWrites: false });
-			new NyaDB();
+			const db = new NyaDB({ validateInput: false, useAtomicWrites: false });
+			const sameDb = new NyaDB();
 
-			const dbName = 'instance:config';
-			const result = unsafeDb.create(dbName);
-			await wait();
+			assert.strictEqual(sameDb, db, 'Repeated construction should return the singleton');
+			const result = db.create('instance:config');
 
-			assert.strictEqual(result, true, 'Instance config should allow the operation after another instance resets defaults');
-			unsafeDb.delete(dbName);
-			await wait();
-			console.log('✓ Test 18d: Instance configuration is reapplied per operation');
+			assert.strictEqual(result, false, 'The latest singleton configuration should be applied');
+			console.log('✓ Test 18d: Singleton configuration follows the latest initialization');
 			passedTests++;
 		} catch (err) {
 			console.error('✗ Test 18d failed:', err.message);
@@ -559,6 +606,72 @@ async function runTests() {
 		failedTests++;
 	}
 
+	// Test 18f: Debounced critical errors are observable without an uncaught exception
+	try {
+		const db = new NyaDB({ maxFileSize: 1, writeDebounce: 25 });
+		const dbName = `${TEST_PREFIX}debounced_critical`;
+		const payload = 'x'.repeat(1024 * 1024);
+
+		assert.strictEqual(db.create(dbName), true, 'Debounced critical test database should be created');
+		await wait();
+		assert.strictEqual(db.exists(dbName), true, 'Debounced critical test database should be loaded');
+		withMutedConsoleError(() => db.set(dbName, { payload }));
+		await wait(100);
+
+		const asyncError = db.getLastError();
+		assert.ok(asyncError && asyncError.isCritical, 'Debounced critical errors should be observable');
+		db.delete(dbName);
+		await wait();
+		console.log('✓ Test 18f: Debounced critical errors are observable');
+		passedTests++;
+	} catch (err) {
+		console.error('✗ Test 18f failed:', err.message);
+		failedTests++;
+	}
+
+	// Test 18g: Loader-owned names are reserved
+	try {
+		const db = new NyaDB();
+		['custom', 'database_backup', `${TEST_PREFIX}.tmp-data`].forEach(name => {
+			assert.strictEqual(db.create(name), false, `Reserved name should be rejected: ${name}`);
+			assert.strictEqual(db.exists(name), false, `Reserved name should not exist: ${name}`);
+		});
+		console.log('✓ Test 18g: Loader-owned names are reserved');
+		passedTests++;
+	} catch (err) {
+		console.error('✗ Test 18g failed:', err.message);
+		failedTests++;
+	}
+
+	// Test 18h: Zero maxFileSize disables the limit
+	try {
+		const db = new NyaDB({ maxFileSize: 0 });
+		const dbName = `${TEST_PREFIX}unlimited_size`;
+		db.create(dbName);
+		await wait();
+		assert.strictEqual(db.set(dbName, { value: 'unlimited' }), true, 'maxFileSize: 0 should allow writes');
+		await wait();
+		db.delete(dbName);
+		await wait();
+		console.log('✓ Test 18h: Zero maxFileSize disables the limit');
+		passedTests++;
+	} catch (err) {
+		console.error('✗ Test 18h failed:', err.message);
+		failedTests++;
+	}
+
+	// Test 18i: NyaDB exposes one shared instance
+	try {
+		const first = new NyaDB();
+		const second = new NyaDB({ maxFileSize: 0 });
+		assert.strictEqual(second, first, 'NyaDB should return the existing singleton instance');
+		console.log('✓ Test 18i: NyaDB exposes one shared instance');
+		passedTests++;
+	} catch (err) {
+		console.error('✗ Test 18i failed:', err.message);
+		failedTests++;
+	}
+
 	// Test 19: Write debouncing (rapid writes)
 	try {
 		const db = new NyaDB({ writeDebounce: 20 });
@@ -595,6 +708,62 @@ async function runTests() {
 		passedTests++;
 	} catch (err) {
 		console.error('✗ Test 19a failed:', err.message);
+		failedTests++;
+	}
+
+	// Test 19b: Clear supersedes a pending debounced write
+	try {
+		const db = new NyaDB({ writeDebounce: 100 });
+		const dbName = `${TEST_PREFIX}debounce_clear`;
+		db.create(dbName);
+		await wait();
+		db.set(dbName, { value: 'discarded' });
+		assert.strictEqual(db.clear(dbName), true, 'clear() should succeed with a pending write');
+		await wait(150);
+		assert.deepStrictEqual(db.get(dbName), {}, 'clear() should not be overwritten by a pending write');
+		db.delete(dbName);
+		await wait();
+		console.log('✓ Test 19b: Clear supersedes a pending debounced write');
+		passedTests++;
+	} catch (err) {
+		console.error('✗ Test 19b failed:', err.message);
+		failedTests++;
+	}
+
+	// Test 19c: Delete flushes a pending debounced write before removal
+	try {
+		const db = new NyaDB({ writeDebounce: 100 });
+		const dbName = `${TEST_PREFIX}debounce_delete`;
+		db.create(dbName);
+		await wait();
+		db.set(dbName, { value: 'flushed' });
+		assert.strictEqual(db.delete(dbName), true, 'delete() should succeed with a pending write');
+		await wait(150);
+		assert.strictEqual(db.exists(dbName), false, 'delete() should not be undone by a pending write');
+		console.log('✓ Test 19c: Delete flushes a pending debounced write before removal');
+		passedTests++;
+	} catch (err) {
+		console.error('✗ Test 19c failed:', err.message);
+		failedTests++;
+	}
+
+	// Test 19d: Rename flushes a pending debounced write before moving the file
+	try {
+		const db = new NyaDB({ writeDebounce: 100 });
+		const oldName = `${TEST_PREFIX}debounce_rename_old`;
+		const newName = `${TEST_PREFIX}debounce_rename_new`;
+		db.create(oldName);
+		await wait();
+		db.set(oldName, { value: 'flushed' });
+		assert.strictEqual(db.rename(oldName, newName), true, 'rename() should succeed with a pending write');
+		await wait(150);
+		assert.deepStrictEqual(db.get(newName), { value: 'flushed' }, 'rename() should preserve the pending write');
+		db.delete(newName);
+		await wait();
+		console.log('✓ Test 19d: Rename flushes a pending debounced write before moving the file');
+		passedTests++;
+	} catch (err) {
+		console.error('✗ Test 19d failed:', err.message);
 		failedTests++;
 	}
 
@@ -856,9 +1025,7 @@ async function runTests() {
 				throw new Error('Failed to create symlink (test environment does not support symlinks)');
 			}
 
-			const result = db.set(linkName, { hacked: true });
-
-			assert.strictEqual(result, false, 'Write through symlink should be rejected');
+			assert.throws(() => db.set(linkName, { hacked: true }), /Database does not exist/, 'Write through symlink should be rejected');
 
 			// Ensure no file was written outside root
 			const outsideFiles = fs.readdirSync(outsideDir);
