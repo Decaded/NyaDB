@@ -60,10 +60,10 @@ jobs:
     permissions:
       contents: read
       packages: write
+
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup Node.js and publish to GitHub Packages
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 24
