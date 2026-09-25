@@ -5,11 +5,12 @@ const { getDatabaseFilePath, validateDatabaseName } = require('./validation/vali
 
 /**
  * Renames a database file.
- * @param {string} oldName - The current name of the database.
+ * @param {string} oldName - The name of the database to rename.
  * @param {string} newName - The new name for the database.
+ * @param {object} database - The in-memory database registry.
  * @returns {boolean} - Whether or not the database was renamed successfully.
  */
-module.exports = function renameDatabase(oldName, newName) {
+module.exports = function renameDatabase(oldName, newName, database) {
 	try {
 		if (config.validateInput === true) {
 			validateDatabaseName(oldName);
@@ -30,6 +31,8 @@ module.exports = function renameDatabase(oldName, newName) {
 		}
 
 		renameSync(oldPath, newPath);
+		database[newName] = database[oldName];
+		delete database[oldName];
 		log('Rename Database', 'Database renamed:', oldName, '->', newName);
 		return true;
 	} catch (error) {

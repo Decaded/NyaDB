@@ -2,6 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { spawnSync } = require('child_process');
 const NyaDB = require('../index');
 const config = require('../config/config');
 const { serializeDatabase } = require('../functions/validation/validateInput');
@@ -156,6 +157,83 @@ async function runTests() {
 		passedTests++;
 	} catch (err) {
 		console.error('✗ Test 1c failed:', err.message);
+		failedTests++;
+	}
+
+	// Test 1d: Write-path operations do not reload the database directory
+	try {
+		const loadCountScript = `
+const path = require('path');
+const packagePath = process.env.NYADB_TEST_PACKAGE;
+const tempDir = process.env.NYADB_TEST_ROOT;
+process.chdir(tempDir);
+const loadFilePath = require.resolve(path.join(packagePath, 'functions', 'operations', 'loadFile.js'));
+const originalLoadFile = require(loadFilePath);
+let loadCount = 0;
+require.cache[loadFilePath].exports = function countedLoadFile() {
+	loadCount += 1;
+	return originalLoadFile.apply(this, arguments);
+};
+delete require.cache[require.resolve(path.join(packagePath, 'functions', 'loadDatabase.js'))];
+delete require.cache[require.resolve(path.join(packagePath, 'index.js'))];
+const NyaDB = require(packagePath);
+const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+(async () => {
+	const db = new NyaDB({ writeDebounce: 5 });
+	const name = '__nyadb_test__load_count';
+	const renamedName = '__nyadb_test__load_count_renamed';
+	const initial = loadCount;
+	db.create(name);
+	const afterCreate = loadCount;
+	db.set(name, { value: 1 });
+	await wait(20);
+	const afterSet = loadCount;
+	db.clear(name);
+	const afterClear = loadCount;
+	db.delete(name);
+	const afterDelete = loadCount;
+	db.create(name);
+	db.rename(name, renamedName);
+	db.delete(renamedName);
+	const afterLifecycle = loadCount;
+	db.reload();
+	const afterReload = loadCount;
+	process.stdout.write('RESULT:' + JSON.stringify({ initial, afterCreate, afterSet, afterClear, afterDelete, afterLifecycle, afterReload }) + '\\n');
+})();
+`;
+		const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nyadb-load-count-'));
+
+		try {
+			const result = spawnSync(process.execPath, ['-e', loadCountScript], {
+				encoding: 'utf8',
+				env: {
+					...process.env,
+					NYADB_TEST_PACKAGE: path.resolve(__dirname, '..'),
+					NYADB_TEST_ROOT: tempDir,
+				},
+			});
+
+			assert.strictEqual(result.status, 0, result.stderr || result.stdout);
+			const resultLine = result.stdout.split('\n').find(line => line.startsWith('RESULT:'));
+			assert.ok(resultLine, 'Load-count child process should return its result');
+			const counts = JSON.parse(resultLine.slice('RESULT:'.length));
+			assert.deepStrictEqual(counts, {
+				initial: 1,
+				afterCreate: 1,
+				afterSet: 1,
+				afterClear: 1,
+				afterDelete: 1,
+				afterLifecycle: 1,
+				afterReload: 2,
+			});
+			console.log('✓ Test 1d: Write-path operations do not reload the database directory');
+			passedTests++;
+		} finally {
+			removeDirectory(tempDir);
+		}
+	} catch (err) {
+		console.error('✗ Test 1d failed:', err.message);
 		failedTests++;
 	}
 
@@ -905,6 +983,39 @@ async function runTests() {
 		passedTests++;
 	} catch (err) {
 		console.error('✗ Test 25 failed:', err.message);
+		failedTests++;
+	}
+
+	// Test 25a: reload() flushes pending writes and observes external changes
+	try {
+		const db = new NyaDB({ writeDebounce: 50 });
+		const dbName = `${TEST_PREFIX}reload_pending`;
+		const externalName = `${TEST_PREFIX}reload_external`;
+		const dbFile = path.join(TEST_DB_FOLDER, `${dbName}.json`);
+		const externalFile = path.join(TEST_DB_FOLDER, `${externalName}.json`);
+
+		assert.strictEqual(db.create(dbName), true, 'Reload test database should be created');
+		db.set(dbName, { pending: true });
+		assert.strictEqual(db.reload(), true, 'Explicit reload should succeed');
+		assert.deepStrictEqual(db.get(dbName), { pending: true }, 'reload() should flush pending writes');
+		assert.deepStrictEqual(JSON.parse(fs.readFileSync(dbFile, 'utf8')), { pending: true }, 'Reloaded data should be persisted');
+
+		fs.writeFileSync(dbFile, JSON.stringify({ external: true }), 'utf8');
+		fs.writeFileSync(externalFile, JSON.stringify({ added: true }), 'utf8');
+		assert.deepStrictEqual(db.get(dbName), { pending: true }, 'External edits should not be observed automatically');
+		assert.strictEqual(db.exists(externalName), false, 'External files should not appear before reload');
+
+		assert.strictEqual(db.reload(), true, 'External-state reload should succeed');
+		assert.deepStrictEqual(db.get(dbName), { external: true }, 'reload() should observe external edits');
+		assert.deepStrictEqual(db.get(externalName), { added: true }, 'reload() should observe external additions');
+
+		db.delete(dbName);
+		db.delete(externalName);
+		await wait();
+		console.log('✓ Test 25a: reload() flushes pending writes and observes external changes');
+		passedTests++;
+	} catch (err) {
+		console.error('✗ Test 25a failed:', err.message);
 		failedTests++;
 	}
 

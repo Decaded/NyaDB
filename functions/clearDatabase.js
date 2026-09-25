@@ -6,9 +6,10 @@ const { validateDatabaseName } = require('./validation/validateInput');
 /**
  * Clears a database by resetting its contents to an empty object.
  * @param {string} name - The name of the database to clear.
+ * @param {object} database - The in-memory database registry.
  * @returns {boolean} - Whether or not the database was cleared successfully.
  */
-module.exports = function clearDatabase(name) {
+module.exports = function clearDatabase(name, database) {
 	try {
 		if (config.validateInput === true) {
 			validateDatabaseName(name);
@@ -17,6 +18,7 @@ module.exports = function clearDatabase(name) {
 		const saved = saveFile({}, name);
 		if (!saved) return false;
 
+		database[name] = {};
 		log('Clear Database', 'Database cleared:', name);
 		return true;
 	} catch (error) {

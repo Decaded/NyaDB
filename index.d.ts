@@ -218,6 +218,12 @@ declare class NyaDB {
 	create(name: string): boolean;
 
 	/**
+	 * Reloads all databases from the data directory after flushing pending writes.
+	 * @returns {boolean} Whether the reload action completed successfully.
+	 */
+	reload(): boolean;
+
+	/**
 	 * Deletes the database with the provided name, if it exists.
 	 * @param {string} name - The name of the database to delete.
 	 * @returns {boolean} - True if database was deleted, false if it doesn't exist or deletion failed.

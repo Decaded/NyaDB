@@ -6,9 +6,10 @@ const { getDatabaseFilePath, validateDatabaseName } = require('./validation/vali
 /**
  * Deletes a database.
  * @param {string} name - The name of the database to delete.
+ * @param {object} database - The in-memory database registry.
  * @returns {boolean} - Whether or not the database was deleted successfully.
  */
-module.exports = function deleteDatabase(name) {
+module.exports = function deleteDatabase(name, database) {
 	try {
 		if (config.validateInput === true) {
 			validateDatabaseName(name);
@@ -21,6 +22,7 @@ module.exports = function deleteDatabase(name) {
 		}
 
 		unlinkSync(fullPath);
+		delete database[name];
 		log('Delete Database', 'Database deleted:', name);
 		return true;
 	} catch (error) {

@@ -8,7 +8,9 @@ const database = new NyaDB({
 const size: NyaDB.DatabaseSize | NyaDB.MultipleDatabaseSize | null = database.size();
 const status: NyaDB.DatabaseSizeStatus | NyaDB.MultipleDatabaseSizeStatus | null = database.sizeStatus();
 const lastError: Error | null = database.getLastError();
+const reloadResult: boolean = database.reload();
 
 void size;
 void status;
 void lastError;
+void reloadResult;

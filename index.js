@@ -108,7 +108,6 @@ module.exports = class NyaDB {
 
 				try {
 					this.scheduledActions.push({ action: 'set', name, data: mergedData });
-					this.scheduledActions.push({ action: 'load' });
 					this.synchronizedScheduler();
 				} catch (error) {
 					this.lastError = error;
@@ -142,6 +141,12 @@ module.exports = class NyaDB {
 		}
 	}
 
+	flushPendingSets() {
+		Object.keys(this.pendingSetOperations).forEach(name => {
+			this.reconcilePendingSet(name, true);
+		});
+	}
+
 	/**
 	 * Ensures scheduled database actions execute sequentially.
 	 * @returns {boolean} Whether the last executed action succeeded.
@@ -171,18 +176,18 @@ module.exports = class NyaDB {
 		log('Action Scheduled', action.action, action.name, action.data);
 		switch (action.action) {
 			case 'create':
-				return createDatabase(action.name);
+				return createDatabase(action.name, this.database);
 			case 'delete':
-				return deleteDatabase(action.name);
+				return deleteDatabase(action.name, this.database);
 			case 'load':
 				this.database = loadDatabase();
 				return true;
 			case 'set':
 				return setDatabase(this.database, action.name, action.data);
 			case 'clear':
-				return clearDatabase(action.name);
+				return clearDatabase(action.name, this.database);
 			case 'rename':
-				return renameDatabase(action.name, action.data.newName);
+				return renameDatabase(action.name, action.data.newName, this.database);
 			default:
 				log('Error', 'Unknown action:', action.action);
 				return false;
@@ -209,7 +214,6 @@ module.exports = class NyaDB {
 			const created = this.scheduleAction('create', name);
 			if (!created) return false;
 
-			this.scheduleAction('load');
 			return true;
 		} catch (error) {
 			log('Error', 'Create operation failed:', error.message);
@@ -238,7 +242,6 @@ module.exports = class NyaDB {
 			const deleted = this.scheduleAction('delete', name);
 			if (!deleted) return false;
 
-			this.scheduleAction('load');
 			return true;
 		} catch (error) {
 			log('Error', 'Delete operation failed:', error.message);
@@ -321,6 +324,16 @@ module.exports = class NyaDB {
 	}
 
 	/**
+	 * Reloads all databases from the data directory after flushing pending writes.
+	 * @returns {boolean} Whether the reload action completed successfully.
+	 */
+	reload() {
+		this.applyConfig();
+		this.flushPendingSets();
+		return this.scheduleAction('load');
+	}
+
+	/**
 	 * Returns the most recent error raised by an asynchronous debounced write.
 	 * @returns {Error|null} The asynchronous write error, if one occurred.
 	 */
@@ -395,7 +408,6 @@ module.exports = class NyaDB {
 			const cleared = this.scheduleAction('clear', name);
 			if (!cleared) return false;
 
-			this.scheduleAction('load');
 			return true;
 		} catch (error) {
 			log('Error', 'Clear operation failed:', error.message);
@@ -433,7 +445,6 @@ module.exports = class NyaDB {
 			const renamed = this.scheduleAction('rename', oldName, { newName });
 			if (!renamed) return false;
 
-			this.scheduleAction('load');
 			return true;
 		} catch (error) {
 			log('Error', 'Rename operation failed:', error.message);

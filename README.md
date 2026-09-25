@@ -37,6 +37,16 @@ You can pass settings on initialization. [More information below](#configuration
 
 NyaDB uses one shared instance per process. Repeated `new NyaDB()` calls return that same instance and replace its configuration, so initialize it once where possible.
 
+### Reloading external changes
+
+Lifecycle operations update the in-memory database map directly and do not reload every database after each write. If files are added, edited, or removed outside NyaDB, call `reload()` to re-read the data directory:
+
+```js
+nyadb.reload();
+```
+
+`reload()` is synchronous and flushes pending debounced writes before loading. A data directory must be used by one NyaDB process or isolate; sharing it between processes is unsupported, and `reload()` does not provide locking or conflict resolution.
+
 ### Creating new database
 
 ```js

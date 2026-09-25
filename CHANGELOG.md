@@ -4,6 +4,21 @@ All notable changes to the project will be documented in this file.
 
 ---
 
+## [6.2.0](https://www.npmjs.com/package/@decaded/nyadb/v/6.2.0) (2026-09-25)
+
+### Added
+
+- Added `reload()` for explicitly re-reading database files after external changes.
+
+### Changed
+
+- Lifecycle operations now reconcile the in-memory database map directly instead of reloading every database after a write.
+- External file changes are observed only after `reload()` or a process restart; one NyaDB process or isolate must own a data directory.
+
+### Performance
+
+- Removed synchronous, total-database-size reloads from `create()`, `delete()`, `clear()`, `rename()`, and debounced `set()` flushes.
+
 ## [6.1.1](https://www.npmjs.com/package/@decaded/nyadb/v/6.1.1) (2026-08-21)
 
 ### Security
