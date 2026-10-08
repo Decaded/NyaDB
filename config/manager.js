@@ -33,6 +33,7 @@ const defaultConfigPath = path.join(__dirname, 'default.json');
 const defaultConfig = loadJsonFile(defaultConfigPath);
 
 let baseConfig = defaultConfig;
+// Deprecated legacy config-file override is retained through v6 and removed in v7.
 const customConfigPath = path.join('./', defaultConfig.storage.databaseFolderName, 'custom.json');
 if (existsSync(customConfigPath)) {
 	const customConfig = loadJsonFile(customConfigPath);

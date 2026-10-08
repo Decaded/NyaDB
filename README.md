@@ -47,6 +47,10 @@ nyadb.reload();
 
 `reload()` is synchronous and flushes pending debounced writes before loading. A data directory must be used by one NyaDB process or isolate; sharing it between processes is unsupported, and `reload()` does not provide locking or conflict resolution.
 
+### Orphaned temporary file cleanup
+
+NyaDB writes atomically by writing to a temporary file and renaming it into place. If the process is killed hard (for example `SIGKILL`) between those two steps, the temporary file is orphaned. On startup, NyaDB sweeps the data directory and deletes orphaned temp files older than 60 seconds. Fresh temp files, real databases, `custom.json`, and `database_backup.json` are never touched, and cleanup is best-effort, so a missing or unreadable data directory does not prevent startup.
+
 ### Creating new database
 
 ```js
@@ -206,6 +210,7 @@ const nyadb = new NyaDB({
 - Changes to these settings will take effect immediately on initialization.
 - To return to the default values, simply remove the setting.
 - `useAtomicWrites` requires `validateInput: true`. Setting `useAtomicWrites: true` with `validateInput: false` will throw a configuration error.
+- The optional `NyaDB/custom.json` config file is deprecated and will be removed in v7. Pass settings directly to the constructor instead.
 
 ## Migration Guide
 

@@ -4,6 +4,18 @@ All notable changes to the project will be documented in this file.
 
 ---
 
+## [6.3.0](https://www.npmjs.com/package/@decaded/nyadb/v/6.3.0) (2026-10-08)
+
+### Added
+
+- Added a best-effort startup sweep that removes temp files orphaned by a hard process kill (SIGKILL, crash) between the temp-file write and rename of an atomic write. Only files
+  matching the exact `*.tmp-<13-digit timestamp>-<random>.json` pattern and older than 60 seconds are removed. Real databases, `custom.json`, `database_backup.json`, legacy
+  `.tmp.json` files, and fresh in-flight temp files are left untouched. A missing or unreadable data root never prevents startup.
+
+### Deprecated
+
+- The optional `NyaDB/custom.json` config-file override is deprecated in favor of constructor configuration and is scheduled for removal in v7.
+
 ## [6.2.0](https://www.npmjs.com/package/@decaded/nyadb/v/6.2.0) (2026-09-25)
 
 ### Added

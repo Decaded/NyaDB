@@ -1,6 +1,7 @@
 const { existsSync, mkdirSync } = require('fs');
 const log = require('../logs/logger');
 const migrateOldData = require('./migrateOldData');
+const cleanupTempFiles = require('./cleanupTempFiles');
 const { resolveDataRoot } = require('../validation/validateInput');
 
 module.exports = function setupDatabase() {
@@ -18,6 +19,8 @@ module.exports = function setupDatabase() {
 		if (!migrationSuccess) {
 			throw new Error('Database initialization halted due to migration failure.');
 		}
+
+		cleanupTempFiles();
 
 		return true;
 	} catch (error) {

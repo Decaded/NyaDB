@@ -237,6 +237,109 @@ const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 		failedTests++;
 	}
 
+	// Test 1e Startup sweep reaps orphaned temp files but preserves live files
+	try {
+		const sweepScript = `
+process.chdir(process.env.NYADB_TEST_ROOT);
+const NyaDB = require(process.env.NYADB_TEST_PACKAGE);
+const db = new NyaDB();
+process.stdout.write('RESULT:' + JSON.stringify(db.getList()) + '\\n');
+`;
+		const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nyadb-sweep-'));
+		const dbDir = path.join(tempDir, TEST_DB_FOLDER);
+		const backdatedOrphan = `rateLimit.tmp-${Date.now() - 3600000}-aaa.json`;
+		const freshOrphan = `rateLimit.tmp-${Date.now()}-bbb.json`;
+		const realDatabase = `${TEST_PREFIX}sweep_real`;
+		const protectedFiles = ['rateLimit.json', 'custom.json', 'database_backup.json', `${realDatabase}.json`, 'legacy.tmp.json'];
+
+		try {
+			fs.mkdirSync(dbDir);
+			fs.writeFileSync(path.join(dbDir, backdatedOrphan), JSON.stringify({ stale: true }), 'utf8');
+			fs.writeFileSync(path.join(dbDir, freshOrphan), JSON.stringify({ pending: true }), 'utf8');
+			protectedFiles.forEach(file => {
+				fs.writeFileSync(path.join(dbDir, file), JSON.stringify({ keep: true }), 'utf8');
+			});
+			fs.utimesSync(path.join(dbDir, backdatedOrphan), new Date(Date.now() - 3600000), new Date(Date.now() - 3600000));
+
+			const result = spawnSync(process.execPath, ['-e', sweepScript], {
+				encoding: 'utf8',
+				env: {
+					...process.env,
+					NYADB_TEST_PACKAGE: path.resolve(__dirname, '..'),
+					NYADB_TEST_ROOT: tempDir,
+				},
+			});
+
+			assert.strictEqual(result.status, 0, result.stderr || result.stdout);
+			const resultLine = result.stdout.split('\n').find(line => line.startsWith('RESULT:'));
+			assert.ok(resultLine, 'Sweep child process should return its result');
+			const list = JSON.parse(resultLine.slice('RESULT:'.length));
+
+			assert.strictEqual(list.includes('rateLimit'), true, 'Real rateLimit database should be loaded');
+			assert.strictEqual(list.includes(realDatabase), true, 'Real database should be loaded');
+			assert.strictEqual(list.length, 2, 'Only real database files should be loaded');
+			assert.strictEqual(fs.existsSync(path.join(dbDir, backdatedOrphan)), false, 'Backdated orphan temp file should be removed');
+			assert.strictEqual(fs.existsSync(path.join(dbDir, freshOrphan)), true, 'Fresh orphan temp file should be kept');
+			protectedFiles.forEach(file => {
+				assert.strictEqual(fs.existsSync(path.join(dbDir, file)), true, `${file} should be untouched by the sweep`);
+			});
+
+			console.log('✓ Test 1e: Startup sweep reaps orphaned temp files');
+			passedTests++;
+		} finally {
+			removeDirectory(tempDir);
+		}
+	} catch (err) {
+		console.error('✗ Test 1e failed:', err.message);
+		failedTests++;
+	}
+
+	// Test 1f Startup sweep tolerates a missing or unreadable data root
+	try {
+		const sweepRootScript = `
+process.chdir(process.env.NYADB_TEST_ROOT);
+const NyaDB = require(process.env.NYADB_TEST_PACKAGE);
+new NyaDB();
+process.stdout.write('RESULT:ok\\n');
+`;
+		const missingRootDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nyadb-sweep-missing-'));
+		const unreadableRootDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nyadb-sweep-unreadable-'));
+		const childEnv = {
+			...process.env,
+			NYADB_TEST_PACKAGE: path.resolve(__dirname, '..'),
+		};
+
+		try {
+			const missingResult = spawnSync(process.execPath, ['-e', sweepRootScript], {
+				encoding: 'utf8',
+				env: { ...childEnv, NYADB_TEST_ROOT: missingRootDir },
+			});
+
+			assert.strictEqual(missingResult.status, 0, missingResult.stderr || missingResult.stdout);
+			assert.ok(missingResult.stdout.includes('RESULT:ok'), 'Constructor should succeed with a missing data root');
+			assert.strictEqual(fs.existsSync(path.join(missingRootDir, TEST_DB_FOLDER)), true, 'Missing data root should be created');
+
+			// The data root path is a regular file, so readdirSync during the sweep fails
+			fs.writeFileSync(path.join(unreadableRootDir, TEST_DB_FOLDER), 'not a directory', 'utf8');
+			const unreadableResult = spawnSync(process.execPath, ['-e', sweepRootScript], {
+				encoding: 'utf8',
+				env: { ...childEnv, NYADB_TEST_ROOT: unreadableRootDir },
+			});
+
+			assert.strictEqual(unreadableResult.status, 0, unreadableResult.stderr || unreadableResult.stdout);
+			assert.ok(unreadableResult.stdout.includes('RESULT:ok'), 'Constructor should succeed with an unreadable data root');
+
+			console.log('✓ Test 1f: Startup sweep tolerates a missing or unreadable data root');
+			passedTests++;
+		} finally {
+			removeDirectory(missingRootDir);
+			removeDirectory(unreadableRootDir);
+		}
+	} catch (err) {
+		console.error('✗ Test 1f failed:', err.message);
+		failedTests++;
+	}
+
 	// Test 2: Initialize NyaDB with custom config
 	try {
 		const db = new NyaDB({
