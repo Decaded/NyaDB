@@ -285,14 +285,13 @@ function serializeDatabase(data) {
 }
 
 /**
- * Checks merged data size and enforces limits with warnings and grace margin.
+ * Checks an already-serialized data size and enforces limits with warnings and grace margin.
  * @param {string} name - The database name.
- * @param {object} mergedData - The merged data to check.
+ * @param {number} sizeInBytes - Serialized size in bytes.
  * @param {number} maxSizeMB - Maximum size in megabytes (optional, from config).
  * @returns {object} - Size status for the merged data.
  */
-function checkMergedDataSize(name, mergedData, maxSizeMB) {
-	const encoding = (config && config.encoding) || 'utf8';
+function checkSizeBytes(name, sizeInBytes, maxSizeMB) {
 	if (!maxSizeMB) {
 		return {
 			isCritical: false,
@@ -301,8 +300,6 @@ function checkMergedDataSize(name, mergedData, maxSizeMB) {
 		};
 	}
 
-	const jsonString = serializeDatabase(mergedData);
-	const sizeInBytes = Buffer.byteLength(jsonString, encoding);
 	const sizeMB = sizeInBytes / 1024 / 1024;
 	const limitMB = Number(maxSizeMB);
 	const warningThresholdMB = limitMB * 0.8;
@@ -323,12 +320,37 @@ function checkMergedDataSize(name, mergedData, maxSizeMB) {
 	};
 }
 
+/**
+ * Checks merged data size and enforces limits with warnings and grace margin.
+ * Kept for callers that only have the data object. The write path uses checkSizeBytes to avoid serializing the database twice.
+ * @param {string} name - The database name.
+ * @param {object} mergedData - The merged data to check.
+ * @param {number} maxSizeMB - Maximum size in megabytes (optional, from config).
+ * @returns {object} - Size status for the merged data.
+ */
+function checkMergedDataSize(name, mergedData, maxSizeMB) {
+	if (!maxSizeMB) {
+		return {
+			isCritical: false,
+			sizeMB: 0,
+			limitMB: 0,
+		};
+	}
+
+	const encoding = (config && config.encoding) || 'utf8';
+	const jsonString = serializeDatabase(mergedData);
+	const sizeInBytes = Buffer.byteLength(jsonString, encoding);
+
+	return checkSizeBytes(name, sizeInBytes, maxSizeMB);
+}
+
 module.exports = {
 	getDatabaseFilePath,
 	resolveDataRoot,
 	validateDatabaseName,
 	validateData,
 	serializeDatabase,
+	checkSizeBytes,
 	checkMergedDataSize,
 	safeAtomicWrite,
 };

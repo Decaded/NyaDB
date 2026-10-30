@@ -5,8 +5,9 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 const NyaDB = require('../index');
 const config = require('../config/config');
-const { serializeDatabase } = require('../functions/validation/validateInput');
+const { serializeDatabase, checkSizeBytes, checkMergedDataSize } = require('../functions/validation/validateInput');
 const loadDatabase = require('../functions/loadDatabase');
+const saveFile = require('../functions/operations/saveFile');
 
 // Test configuration
 const TEST_PREFIX = '__nyadb_test__';
@@ -78,6 +79,81 @@ function withMutedConsoleError(callback) {
 	} finally {
 		console.error = originalConsoleError;
 	}
+}
+
+let stringifyCalls = [];
+
+function hasKeys(value, keys) {
+	if (value === null || typeof value !== 'object') return false;
+
+	return keys.every(key => Object.prototype.hasOwnProperty.call(value, key));
+}
+
+function countSerialized(keys) {
+	return stringifyCalls.filter(value => hasKeys(value, keys)).length;
+}
+
+async function captureConsole(fn) {
+	const calls = { warn: [], error: [], log: [] };
+	const original = {
+		warn: console.warn,
+		error: console.error,
+		log: console.log,
+	};
+
+	console.warn = (...args) => calls.warn.push(args.join(' '));
+	console.error = (...args) => calls.error.push(args.join(' '));
+	console.log = (...args) => calls.log.push(args.join(' '));
+
+	try {
+		await fn(calls);
+	} finally {
+		console.warn = original.warn;
+		console.error = original.error;
+		console.log = original.log;
+	}
+
+	return calls;
+}
+
+function percentile(sorted, fraction) {
+	const index = Math.min(sorted.length - 1, Math.ceil(sorted.length * fraction) - 1);
+	return sorted[Math.max(0, index)];
+}
+
+function buildBenchmarkPayload(keyCount, valueSize) {
+	const payload = {};
+
+	for (let i = 0; i < keyCount; i++) {
+		payload['k' + i] = 'x'.repeat(valueSize);
+	}
+
+	return payload;
+}
+
+function measureEventLoopLag(action, durationMs) {
+	return new Promise(resolve => {
+		let maxLag = 0;
+		let last = process.hrtime.bigint();
+		const deadline = Date.now() + durationMs;
+
+		function sample() {
+			const now = process.hrtime.bigint();
+			const lag = Number(now - last) / 1e6 - 10;
+			if (lag > maxLag) maxLag = lag;
+			last = now;
+
+			if (Date.now() >= deadline) {
+				resolve(maxLag);
+				return;
+			}
+
+			setTimeout(sample, 10);
+		}
+
+		action();
+		setTimeout(sample, 10);
+	});
 }
 
 /**
@@ -870,6 +946,122 @@ process.stdout.write('RESULT:ok\\n');
 		failedTests++;
 	}
 
+	// Test 18k: Byte-based size checks match object-based checks at thresholds
+	try {
+		const encoding = config.encoding || 'utf8';
+		const samples = [
+			{ tiny: 'value' },
+			{ payload: 'x'.repeat(1024) },
+			{ nested: { a: 1, b: [1, 2, 3] } },
+			{ unicode: '😀 café'.repeat(64) },
+		];
+		const limits = [0, 0.0005, 1, 50];
+
+		const originalWarn = console.warn;
+		const originalError = console.error;
+		console.warn = () => undefined;
+		console.error = () => undefined;
+
+		try {
+			for (const sample of samples) {
+				for (const limit of limits) {
+					const expected = checkMergedDataSize('parity', sample, limit);
+					const actual = checkSizeBytes(
+						'parity',
+						Buffer.byteLength(serializeDatabase(sample), encoding),
+						limit,
+					);
+
+					assert.deepStrictEqual(
+						actual,
+						expected,
+						`checkSizeBytes should match checkMergedDataSize for limit ${limit}`,
+					);
+				}
+			}
+
+			const limit = 1;
+			const limitBytes = limit * 1024 * 1024;
+
+			assert.strictEqual(
+				checkSizeBytes('boundary', Math.floor(limitBytes * 0.8), limit).isCritical,
+				false,
+				'Size below the 80% warning threshold should not be critical',
+			);
+			assert.strictEqual(
+				checkSizeBytes('boundary', Math.ceil(limitBytes * 0.8), limit).isCritical,
+				false,
+				'Size just above the 80% warning threshold should still be under the limit',
+			);
+			assert.strictEqual(
+				checkSizeBytes('boundary', Math.ceil(limitBytes * 0.99), limit).isCritical,
+				false,
+				'Size in the 99% grace threshold should not be critical',
+			);
+			assert.strictEqual(
+				checkSizeBytes('boundary', limitBytes, limit).isCritical,
+				true,
+				'Size at the limit should be critical',
+			);
+			assert.strictEqual(
+				checkSizeBytes('boundary', limitBytes + 1, limit).isCritical,
+				true,
+				'Size above the limit should be critical',
+			);
+			assert.deepStrictEqual(
+				checkSizeBytes('boundary', limitBytes * 4, 0),
+				{ isCritical: false, sizeMB: 0, limitMB: 0 },
+				'maxFileSize: 0 should disable the limit',
+			);
+		} finally {
+			console.warn = originalWarn;
+			console.error = originalError;
+		}
+
+		console.log('✓ Test 18k: Byte-based size checks match object-based thresholds');
+		passedTests++;
+	} catch (err) {
+		console.error('✗ Test 18k failed:', err.message);
+		failedTests++;
+	}
+
+	// Test 18l: Failed writes restore the previous in-memory data
+	try {
+		const db = new NyaDB({ writeDebounce: 0 });
+		const dbName = `${TEST_PREFIX}rollback`;
+		db.create(dbName);
+		await wait();
+
+		assert.strictEqual(db.set(dbName, { stable: true }), true, 'Initial write should succeed');
+
+		const filePath = path.join(TEST_DB_FOLDER, `${dbName}.json`);
+		fs.unlinkSync(filePath);
+		fs.mkdirSync(filePath);
+
+		try {
+			const result = withMutedConsoleError(() => db.set(dbName, { unstable: true }));
+
+			assert.strictEqual(result, false, 'set() should fail when the write cannot complete');
+			assert.deepStrictEqual(db.get(dbName), { stable: true }, 'Failed write should restore previous data');
+
+			const leftovers = fs.readdirSync(TEST_DB_FOLDER)
+				.filter(file => file.startsWith(`${dbName}.tmp-`));
+			assert.deepStrictEqual(leftovers, [], 'Failed atomic write should not leave temp files behind');
+		} finally {
+			fs.rmdirSync(filePath);
+		}
+
+		fs.writeFileSync(filePath, JSON.stringify({ stable: true }), 'utf8');
+		db.delete(dbName);
+		await wait();
+
+		console.log('✓ Test 18l: Failed writes restore the previous in-memory data');
+		passedTests++;
+	} catch (err) {
+		console.error('✗ Test 18l failed:', err.message);
+		failedTests++;
+	}
+
 	// Test 19: Write debouncing (rapid writes)
 	try {
 		const db = new NyaDB({ writeDebounce: 20 });
@@ -1274,6 +1466,711 @@ process.stdout.write('RESULT:ok\\n');
 		}
 	} else {
 		console.log('↷ Test 31 skipped (symlink test not supported on Windows)');
+	}
+
+	// Test 32: Synchronous set serializes the merged database once
+	const writePathTempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nyadb-writepath-'));
+	const writePathOriginalCwd = process.cwd();
+	const writePathDataRoot = path.join(writePathTempDir, 'NyaDB');
+	const writePathDbPath = name => path.join(writePathDataRoot, `${name}.json`);
+	const writePathReadDb = name => fs.readFileSync(writePathDbPath(name), config.encoding);
+	const writePathTempFiles = () => fs.readdirSync(writePathDataRoot).filter(file => file.includes('.tmp-'));
+	const writePathUnique = prefix => `${prefix}_${Math.random().toString(36).slice(2, 8)}`;
+	const writePathAssertBytesMatch = (db, name, expected) => {
+		assert.strictEqual(writePathReadDb(name), serializeDatabase(expected));
+		assert.deepStrictEqual(db.get(name), expected);
+	};
+	const writePathOriginalStringify = JSON.stringify;
+
+	JSON.stringify = function patchedStringify(value, ...rest) {
+		stringifyCalls.push(value);
+		return writePathOriginalStringify.call(JSON, value, ...rest);
+	};
+
+	try {
+		process.chdir(writePathTempDir);
+		new NyaDB();
+
+		try {
+			const db = new NyaDB({ writeDebounce: 0 });
+			const name = writePathUnique('sync');
+
+			assert.strictEqual(db.create(name), true);
+			assert.strictEqual(db.set(name, { existing: true }), true);
+
+			stringifyCalls = [];
+			assert.strictEqual(db.set(name, { patched: true }), true);
+
+			assert.strictEqual(countSerialized(['existing', 'patched']), 1, 'merged database should be serialized once');
+			writePathAssertBytesMatch(db, name, { existing: true, patched: true });
+
+			db.delete(name);
+			await wait();
+			console.log('✓ Test 32: Synchronous set serializes the merged database once');
+			passedTests++;
+		} catch (err) {
+			console.error('✗ Test 32 failed:', err.message);
+			failedTests++;
+		}
+
+		// Test 32b: Debounced sets serialize once at flush
+		try {
+			const db = new NyaDB({ writeDebounce: 30 });
+			const name = writePathUnique('debounced');
+
+			db.create(name);
+			await wait();
+
+			stringifyCalls = [];
+			assert.strictEqual(db.set(name, { a: 1 }), true);
+			assert.strictEqual(db.set(name, { b: 2 }), true);
+			assert.strictEqual(db.set(name, { c: 3 }), true);
+
+			assert.strictEqual(countSerialized(['a', 'b', 'c']), 0, 'no serialization before the debounce flush');
+			assert.deepStrictEqual(db.get(name), { a: 1, b: 2, c: 3 }, 'get() should expose pending writes');
+
+			await wait(80);
+
+			assert.strictEqual(countSerialized(['a', 'b', 'c']), 1, 'debounced flush should serialize once');
+			writePathAssertBytesMatch(db, name, { a: 1, b: 2, c: 3 });
+
+			db.delete(name);
+			await wait();
+			console.log('✓ Test 32b: Debounced sets serialize once at flush');
+			passedTests++;
+		} catch (err) {
+			console.error('✗ Test 32b failed:', err.message);
+			failedTests++;
+		}
+
+		// Test 32c: get() references keep snapshot semantics
+		try {
+			const db = new NyaDB({ writeDebounce: 0 });
+			const name = writePathUnique('reference');
+
+			db.create(name);
+			db.set(name, { a: 1 });
+
+			const before = db.get(name);
+			assert.strictEqual(db.set(name, { b: 2 }), true);
+
+			assert.deepStrictEqual(before, { a: 1 }, 'old reference should not observe later writes');
+			assert.deepStrictEqual(db.get(name), { a: 1, b: 2 });
+			assert.notStrictEqual(before, db.get(name), 'get() should return a new object after a write');
+
+			db.delete(name);
+			await wait();
+			console.log('✓ Test 32c: get() references keep snapshot semantics');
+			passedTests++;
+		} catch (err) {
+			console.error('✗ Test 32c failed:', err.message);
+			failedTests++;
+		}
+
+		// Test 32d: Failed synchronous writes restore memory
+		try {
+			const db = new NyaDB({ writeDebounce: 0 });
+			const name = writePathUnique('rollback');
+
+			db.create(name);
+			db.set(name, { stable: true });
+
+			const file = writePathDbPath(name);
+			fs.unlinkSync(file);
+			fs.mkdirSync(file);
+
+			try {
+				let result = false;
+				await captureConsole(() => {
+					result = db.set(name, { unstable: true });
+				});
+
+				assert.strictEqual(result, false, 'set() should fail when the target cannot be replaced');
+				assert.deepStrictEqual(db.get(name), { stable: true }, 'failed write should restore previous data');
+				assert.deepStrictEqual(writePathTempFiles(), [], 'failed atomic write should clean up its temp file');
+			} finally {
+				fs.rmdirSync(file);
+				fs.writeFileSync(file, writePathOriginalStringify({ stable: true }), 'utf8');
+				db.delete(name);
+				await wait();
+			}
+
+			console.log('✓ Test 32d: Failed synchronous writes restore memory');
+			passedTests++;
+		} catch (err) {
+			console.error('✗ Test 32d failed:', err.message);
+			failedTests++;
+		}
+
+		// Test 32e: Failed debounced writes restore memory
+		try {
+			const db = new NyaDB({ writeDebounce: 20 });
+			const name = writePathUnique('debounce_fail');
+
+			db.create(name);
+			await wait();
+			db.set(name, { stable: true });
+			await wait(80);
+
+			const file = writePathDbPath(name);
+			fs.unlinkSync(file);
+			fs.mkdirSync(file);
+
+			try {
+				await captureConsole(async () => {
+					assert.strictEqual(db.set(name, { unstable: true }), true, 'debounced set should schedule the write');
+					await wait(80);
+				});
+
+				assert.deepStrictEqual(db.get(name), { stable: true }, 'failed debounced write should restore memory');
+				assert.deepStrictEqual(writePathTempFiles(), [], 'failed debounced write should clean up its temp file');
+			} finally {
+				fs.rmdirSync(file);
+				fs.writeFileSync(file, writePathOriginalStringify({ stable: true }), 'utf8');
+				db.delete(name);
+				await wait();
+			}
+
+			console.log('✓ Test 32e: Failed debounced writes restore memory');
+			passedTests++;
+		} catch (err) {
+			console.error('✗ Test 32e failed:', err.message);
+			failedTests++;
+		}
+
+		// Test 32f: Critical-size writes persist before throwing
+		try {
+			const db = new NyaDB({ maxFileSize: 0.001, writeDebounce: 0 });
+			const name = writePathUnique('critical');
+			const payload = 'x'.repeat(4096);
+
+			db.create(name);
+
+			let caught = null;
+			await captureConsole(() => {
+				try {
+					db.set(name, { payload });
+				} catch (error) {
+					caught = error;
+				}
+			});
+
+			assert.ok(caught && caught.isCritical, 'oversized write should throw a critical error');
+			assert.strictEqual(caught.message.includes('hard size limit'), true);
+
+			const saved = JSON.parse(writePathReadDb(name));
+			assert.strictEqual(saved.payload, payload, 'critical write should be saved before throwing');
+			assert.strictEqual(db.get(name).payload, payload, 'critical write should remain in memory');
+
+			db.delete(name);
+			await wait();
+			console.log('✓ Test 32f: Critical-size writes persist before throwing');
+			passedTests++;
+		} catch (err) {
+			console.error('✗ Test 32f failed:', err.message);
+			failedTests++;
+		}
+
+		// Test 32g: Size warnings fire at 80% and grace at 99%
+		try {
+			const db = new NyaDB({
+				maxFileSize: 0.01,
+				writeDebounce: 0,
+				enableConsoleLogs: true,
+				logLevel: 'warn',
+			});
+			const warnName = writePathUnique('warn');
+			const graceName = writePathUnique('grace');
+			const limitBytes = 0.01 * 1024 * 1024;
+
+			db.create(warnName);
+			db.create(graceName);
+
+			const warnData = { payload: 'x'.repeat(9000) };
+			const graceData = { payload: 'x'.repeat(10400) };
+			const warnBytes = Buffer.byteLength(serializeDatabase(warnData), config.encoding);
+			const graceBytes = Buffer.byteLength(serializeDatabase(graceData), config.encoding);
+
+			assert.ok(warnBytes > limitBytes * 0.8 && warnBytes < limitBytes * 0.99, 'warning sample should be in band');
+			assert.ok(graceBytes >= limitBytes * 0.99 && graceBytes < limitBytes, 'grace sample should be in band');
+
+			const logs = await captureConsole(() => {
+				assert.strictEqual(db.set(warnName, warnData), true);
+				assert.strictEqual(db.set(graceName, graceData), true);
+			});
+
+			const approaching = logs.warn.filter(message => message.includes('approaching limit'));
+			const grace = logs.error.filter(message => message.includes('grace threshold'));
+
+			assert.strictEqual(approaching.length, 1, '80% warning should be logged once');
+			assert.strictEqual(grace.length, 1, '99% grace message should be logged once');
+			assert.ok(approaching[0].includes(`'${warnName}'`));
+			assert.ok(grace[0].includes(`'${graceName}'`));
+
+			db.delete(warnName);
+			db.delete(graceName);
+			await wait();
+			console.log('✓ Test 32g: Size warnings fire at 80% and grace at 99%');
+			passedTests++;
+		} catch (err) {
+			console.error('✗ Test 32g failed:', err.message);
+			failedTests++;
+		}
+
+		// Test 32h: maxFileSize: 0 skips size checks
+		try {
+			const db = new NyaDB({
+				maxFileSize: 0,
+				writeDebounce: 0,
+				enableConsoleLogs: true,
+				logLevel: 'debug',
+			});
+			const name = writePathUnique('unlimited');
+
+			let result = false;
+			const logs = await captureConsole(() => {
+				db.create(name);
+				result = db.set(name, { payload: 'x'.repeat(2048) });
+				db.delete(name);
+			});
+
+			assert.strictEqual(result, true);
+			assert.strictEqual(logs.warn.filter(message => message.includes('size')).length, 0);
+			assert.strictEqual(logs.error.filter(message => message.includes('size')).length, 0);
+
+			await wait();
+			console.log('✓ Test 32h: maxFileSize: 0 skips size checks');
+			passedTests++;
+		} catch (err) {
+			console.error('✗ Test 32h failed:', err.message);
+			failedTests++;
+		}
+
+		// Test 32i: Number.MAX_SAFE_INTEGER allows writes without warnings
+		try {
+			const db = new NyaDB({
+				maxFileSize: Number.MAX_SAFE_INTEGER,
+				writeDebounce: 0,
+				enableConsoleLogs: true,
+				logLevel: 'debug',
+			});
+			const name = writePathUnique('maxsafe');
+			const payload = 'x'.repeat(2048);
+
+			let result = false;
+			const logs = await captureConsole(() => {
+				db.create(name);
+				result = db.set(name, { payload });
+			});
+
+			assert.strictEqual(result, true, 'maximum safe storage limit should allow the write');
+
+			const sizeMessages = [...logs.warn, ...logs.error].filter(
+				message => message.includes('limit') || message.includes('size'),
+			);
+			assert.deepStrictEqual(sizeMessages, [], 'maximum safe storage limit should never warn or error');
+
+			const status = db.sizeStatus(name);
+			assert.ok(status, 'sizeStatus should return data for the written database');
+			assert.strictEqual(status.status, 'ok');
+			assert.ok(Number.isFinite(status.percentOfLimit), 'percentOfLimit should stay finite at the maximum limit');
+			assert.ok(status.percentOfLimit >= 0 && status.percentOfLimit < 100);
+			assert.strictEqual(JSON.parse(writePathReadDb(name)).payload, payload);
+
+			await captureConsole(() => db.delete(name));
+			await wait();
+			console.log('✓ Test 32i: Number.MAX_SAFE_INTEGER allows writes without warnings');
+			passedTests++;
+		} catch (err) {
+			console.error('✗ Test 32i failed:', err.message);
+			failedTests++;
+		}
+
+		// Test 32j: Debug logging keeps the original write-path messages
+		try {
+			const db = new NyaDB({
+				writeDebounce: 0,
+				enableConsoleLogs: true,
+				logLevel: 'debug',
+			});
+			const name = writePathUnique('debuglogs');
+			const patch = { debugMarker: true };
+			const expectedLength = JSON.stringify(patch).length;
+
+			const logs = await captureConsole(() => {
+				db.create(name);
+				assert.strictEqual(db.set(name, patch), true);
+				db.delete(name);
+			});
+
+			const about = logs.log.find(line => line.includes(`About to check merged data size for ${name}`));
+			const passed = logs.log.find(line => line.includes(`Size check passed for ${name}`));
+			const calling = logs.log.find(line => line.includes(`Calling saveFile for ${name}`));
+
+			assert.ok(about, 'debug size-check message should still be logged');
+			assert.ok(about.includes(`: ${expectedLength} bytes`), 'debug message should keep the compact JSON length');
+			assert.ok(passed, 'debug size-check-passed message should still be logged');
+			assert.ok(calling, 'debug saveFile message should still be logged');
+
+			await wait();
+			console.log('✓ Test 32j: Debug logging keeps the original write-path messages');
+			passedTests++;
+		} catch (err) {
+			console.error('✗ Test 32j failed:', err.message);
+			failedTests++;
+		}
+
+		// Test 32k: Serialization failures keep the original error path
+		try {
+			const db = new NyaDB({ validateInput: false, useAtomicWrites: false, writeDebounce: 0 });
+			const name = writePathUnique('circular');
+
+			db.create(name);
+
+			const circular = { ok: true };
+			circular.self = circular;
+
+			let result = true;
+			const logs = await captureConsole(() => {
+				result = db.set(name, circular);
+			});
+
+			assert.strictEqual(result, false, 'set() should fail when merged data cannot be serialized');
+			assert.ok(
+				logs.error.some(line => line.includes('Setting database:')),
+				'serialization failures should keep the original error label',
+			);
+			assert.ok(
+				!logs.error.some(line => line.includes('Saving file:')),
+				'serialization should not be reported as a file-save failure',
+			);
+			assert.deepStrictEqual(db.get(name), {}, 'failed serialization should not update memory');
+			assert.deepStrictEqual(writePathTempFiles(), [], 'failed serialization should not leave temp files');
+
+			db.delete(name);
+			await wait();
+			console.log('✓ Test 32k: Serialization failures keep the original error path');
+			passedTests++;
+		} catch (err) {
+			console.error('✗ Test 32k failed:', err.message);
+			failedTests++;
+		}
+
+		// Test 32l: Reconstructing the singleton applies new configuration
+		try {
+			const first = new NyaDB({ maxFileSize: 1, writeDebounce: 0 });
+			const second = new NyaDB({ maxFileSize: 0, writeDebounce: 0 });
+
+			assert.strictEqual(second, first, 'NyaDB should remain a singleton');
+			assert.strictEqual(config.maxFileSize, 0, 'constructor should still apply new configuration');
+			assert.strictEqual(config.writeDebounce, 0, 'constructor should still apply debounce configuration');
+
+			new NyaDB();
+			console.log('✓ Test 32l: Reconstructing the singleton applies new configuration');
+			passedTests++;
+		} catch (err) {
+			console.error('✗ Test 32l failed:', err.message);
+			failedTests++;
+		}
+
+		// Test 32m: saveFile only serializes without a provided string
+		try {
+			new NyaDB();
+			const name = writePathUnique('savefile');
+			const data = { onlySaveFile: true };
+
+			stringifyCalls = [];
+			assert.strictEqual(saveFile(data, name), true);
+			assert.strictEqual(countSerialized(['onlySaveFile']), 1, 'saveFile should serialize once without a provided string');
+
+			const serialized = '{"pre":true}';
+			stringifyCalls = [];
+			assert.strictEqual(saveFile({ ignored: true }, name, serialized), true);
+			assert.strictEqual(countSerialized(['ignored']), 0, 'saveFile should not serialize a provided string');
+			assert.strictEqual(writePathReadDb(name), serialized);
+
+			fs.unlinkSync(writePathDbPath(name));
+			console.log('✓ Test 32m: saveFile only serializes without a provided string');
+			passedTests++;
+		} catch (err) {
+			console.error('✗ Test 32m failed:', err.message);
+			failedTests++;
+		}
+
+		// Test 32n: Read-only operations do not serialize the database
+		try {
+			const db = new NyaDB({ writeDebounce: 0 });
+			const name = writePathUnique('reads');
+
+			db.create(name);
+			db.set(name, { readMarker: true });
+
+			stringifyCalls = [];
+			db.get(name);
+			db.getList();
+			db.exists(name);
+			db.size(name);
+			db.sizeStatus(name);
+
+			assert.strictEqual(countSerialized(['readMarker']), 0, 'reads should not serialize database contents');
+
+			db.delete(name);
+			await wait();
+			console.log('✓ Test 32n: Read-only operations do not serialize the database');
+			passedTests++;
+		} catch (err) {
+			console.error('✗ Test 32n failed:', err.message);
+			failedTests++;
+		}
+
+		// Test 32o: Writes to multiple databases serialize each once
+		try {
+			const db = new NyaDB({ writeDebounce: 0 });
+			const first = writePathUnique('multi_a');
+			const second = writePathUnique('multi_b');
+
+			db.create(first);
+			db.create(second);
+			db.set(first, { aSeed: true });
+			db.set(second, { bSeed: true });
+
+			stringifyCalls = [];
+			assert.strictEqual(db.set(first, { aPatch: true }), true);
+			assert.strictEqual(db.set(second, { bPatch: true }), true);
+
+			assert.strictEqual(countSerialized(['aSeed', 'aPatch']), 1);
+			assert.strictEqual(countSerialized(['bSeed', 'bPatch']), 1);
+			writePathAssertBytesMatch(db, first, { aSeed: true, aPatch: true });
+			writePathAssertBytesMatch(db, second, { bSeed: true, bPatch: true });
+
+			db.delete(first);
+			db.delete(second);
+			await wait();
+			console.log('✓ Test 32o: Writes to multiple databases serialize each once');
+			passedTests++;
+		} catch (err) {
+			console.error('✗ Test 32o failed:', err.message);
+			failedTests++;
+		}
+
+		// Test 32p: Validation disabled still serializes once
+		try {
+			const db = new NyaDB({ validateInput: false, useAtomicWrites: false, writeDebounce: 0 });
+			const name = writePathUnique('novalidate');
+
+			assert.strictEqual(db.create(name), true);
+			db.set(name, { existing: true });
+
+			stringifyCalls = [];
+			assert.strictEqual(db.set(name, { patched: true }), true);
+
+			assert.strictEqual(countSerialized(['existing', 'patched']), 1);
+			writePathAssertBytesMatch(db, name, { existing: true, patched: true });
+
+			db.delete(name);
+			await wait();
+			console.log('✓ Test 32p: Validation disabled still serializes once');
+			passedTests++;
+		} catch (err) {
+			console.error('✗ Test 32p failed:', err.message);
+			failedTests++;
+		}
+
+		// Test 32q: Formatting disabled writes compact bytes
+		try {
+			const db = new NyaDB({ formattingEnabled: false, writeDebounce: 0 });
+			const name = writePathUnique('compact');
+			const data = { unicode: '😀 café', nested: { list: [1, 2, 3] } };
+
+			db.create(name);
+			db.set(name, data);
+
+			writePathAssertBytesMatch(db, name, data);
+			assert.strictEqual(writePathReadDb(name).includes('\n'), false, 'compact output should not contain newlines');
+
+			db.delete(name);
+			await wait();
+			console.log('✓ Test 32q: Formatting disabled writes compact bytes');
+			passedTests++;
+		} catch (err) {
+			console.error('✗ Test 32q failed:', err.message);
+			failedTests++;
+		}
+
+		// Test 32r: Missing databases fail before serializing
+		try {
+			const db = new NyaDB({ writeDebounce: 0 });
+			const name = writePathUnique('missing');
+			const patch = { onlyMissing: true };
+
+			stringifyCalls = [];
+			let caught = null;
+			await captureConsole(() => {
+				try {
+					db.set(name, patch);
+				} catch (error) {
+					caught = error;
+				}
+			});
+
+			assert.ok(caught);
+			assert.strictEqual(caught.code, 'DATABASE_NOT_FOUND');
+			assert.strictEqual(stringifyCalls.filter(value => value !== patch && hasKeys(value, ['onlyMissing'])).length, 0);
+			console.log('✓ Test 32r: Missing databases fail before serializing');
+			passedTests++;
+		} catch (err) {
+			console.error('✗ Test 32r failed:', err.message);
+			failedTests++;
+		}
+
+		// Test 32s: reload() flushes pending debounced writes
+		try {
+			const db = new NyaDB({ writeDebounce: 60 });
+			const name = writePathUnique('reload');
+
+			db.create(name);
+			await wait();
+			db.set(name, { pending: true });
+
+			assert.strictEqual(db.reload(), true);
+			assert.deepStrictEqual(db.get(name), { pending: true });
+			assert.strictEqual(JSON.parse(writePathReadDb(name)).pending, true, 'reload should persist the pending write');
+
+			db.delete(name);
+			await wait();
+			console.log('✓ Test 32s: reload() flushes pending debounced writes');
+			passedTests++;
+		} catch (err) {
+			console.error('✗ Test 32s failed:', err.message);
+			failedTests++;
+		}
+
+		// Test 32t: Successful atomic writes leave no temp files
+		try {
+			const db = new NyaDB({ writeDebounce: 0 });
+			const name = writePathUnique('tempclean');
+
+			db.create(name);
+			db.set(name, { ok: true });
+
+			assert.deepStrictEqual(writePathTempFiles(), []);
+
+			db.delete(name);
+			await wait();
+			console.log('✓ Test 32t: Successful atomic writes leave no temp files');
+			passedTests++;
+		} catch (err) {
+			console.error('✗ Test 32t failed:', err.message);
+			failedTests++;
+		}
+
+		// Test 32u: Threshold messages match between byte and object checks
+		try {
+			new NyaDB({ maxFileSize: 0.01, enableConsoleLogs: true, logLevel: 'warn' });
+			const limit = 0.01;
+			const samples = [
+				{ payload: 'x'.repeat(9000) },
+				{ payload: '😀'.repeat(2200) },
+				{ payload: 'x'.repeat(10400) },
+			];
+
+			for (const data of samples) {
+				const bytes = Buffer.byteLength(serializeDatabase(data), config.encoding);
+				const direct = await captureConsole(() => {
+					checkSizeBytes('parity', bytes, limit);
+				});
+				const wrapped = await captureConsole(() => {
+					checkMergedDataSize('parity', data, limit);
+				});
+
+				assert.deepStrictEqual(direct.warn, wrapped.warn, 'warning messages should match');
+				assert.deepStrictEqual(direct.error, wrapped.error, 'grace messages should match');
+				assert.strictEqual(direct.warn.length + direct.error.length, 1, 'each sample should log exactly once');
+			}
+
+			const multibyte = { payload: '😀'.repeat(2200) };
+			const multibyteBytes = Buffer.byteLength(serializeDatabase(multibyte), config.encoding);
+			assert.ok(
+				multibyteBytes > 0.01 * 1024 * 1024 * 0.8 && multibyteBytes < 0.01 * 1024 * 1024 * 0.99,
+				'multibyte sample should be sized by encoded bytes, not string length',
+			);
+			console.log('✓ Test 32u: Threshold messages match between byte and object checks');
+			passedTests++;
+		} catch (err) {
+			console.error('✗ Test 32u failed:', err.message);
+			failedTests++;
+		}
+	} finally {
+		await wait(100);
+		JSON.stringify = writePathOriginalStringify;
+		new NyaDB();
+		process.chdir(writePathOriginalCwd);
+		fs.rmSync(writePathTempDir, { recursive: true, force: true });
+	}
+
+	// Test 33: Write-path benchmark
+	try {
+		const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nyadb-bench-'));
+		const originalCwd = process.cwd();
+
+		try {
+			process.chdir(tempDir);
+			const db = new NyaDB({
+				enableConsoleLogs: false,
+				writeDebounce: 0,
+				maxFileSize: 0,
+			});
+			const name = 'bench_large';
+			db.create(name);
+			db.set(name, buildBenchmarkPayload(100000, 100));
+
+			const times = [];
+			for (let i = 0; i < 20; i++) {
+				const start = process.hrtime.bigint();
+				assert.strictEqual(db.set(name, { ['touch' + i]: i }), true);
+				times.push(Number(process.hrtime.bigint() - start) / 1e6);
+			}
+
+			times.sort((a, b) => a - b);
+			const p50 = percentile(times, 0.5);
+			const p95 = percentile(times, 0.95);
+			const max = times[times.length - 1];
+
+			const debounced = new NyaDB({ enableConsoleLogs: false, writeDebounce: 10, maxFileSize: 0 });
+			const names = [];
+			const multiPayload = buildBenchmarkPayload(50000, 100);
+
+			for (let i = 0; i < 5; i++) {
+				const dbName = 'bench_multi_' + i;
+				names.push(dbName);
+				debounced.create(dbName);
+				debounced.set(dbName, multiPayload);
+			}
+
+			const lagMs = await measureEventLoopLag(() => {
+				for (const dbName of names) {
+					debounced.set(dbName, { updated: Date.now() });
+				}
+			}, 1200);
+
+			assert.ok(p50 > 0, 'Benchmark p50 should be positive');
+			assert.ok(p95 >= p50, 'Benchmark p95 should be at least p50');
+			assert.ok(max >= p95, 'Benchmark max should be at least p95');
+			assert.ok(Number.isFinite(lagMs) && lagMs >= 0, 'Benchmark lag should be finite and non-negative');
+
+			console.log(
+				`✓ Test 33: Write-path benchmark (p50 ${p50.toFixed(1)} ms, ` +
+				`p95 ${p95.toFixed(1)} ms, max lag ${lagMs.toFixed(1)} ms)`,
+			);
+			passedTests++;
+		} finally {
+			process.chdir(originalCwd);
+			new NyaDB();
+			fs.rmSync(tempDir, { recursive: true, force: true });
+		}
+	} catch (err) {
+		console.error('✗ Test 33 failed:', err.message);
+		failedTests++;
 	}
 
 	// Clean up after tests

@@ -1,20 +1,23 @@
 const saveFile = require('./operations/saveFile');
 const log = require('./logs/logger');
 const config = require('../config/config');
-const { validateDatabaseName, validateData, checkMergedDataSize } = require('./validation/validateInput');
+const { validateDatabaseName, validateData, serializeDatabase, checkSizeBytes } = require('./validation/validateInput');
 
 /**
  * Updates the database with the new data.
  * @param {object} database - The database object
  * @param {string} name - The name of the database to update
  * @param {object} data - The data to be added to the database
+ * @param {object} [options] - Internal options; set `dataValidated` only for data that was already validated.
  * @returns {boolean} - Whether or not the database was updated
  */
-module.exports = function setDatabase(database, name, data) {
+module.exports = function setDatabase(database, name, data, options = {}) {
 	try {
 		if (config.validateInput === true) {
 			validateDatabaseName(name);
-			validateData(data);
+			if (options.dataValidated !== true) {
+				validateData(data);
+			}
 		}
 
 		if (!Object.prototype.hasOwnProperty.call(database, name)) {
@@ -28,11 +31,16 @@ module.exports = function setDatabase(database, name, data) {
 			...data,
 		};
 
-		log('Debug', `About to check merged data size for ${name}: ${JSON.stringify(mergedData).length} bytes`);
+		if (config.enableConsoleLogs === true && (config.logLevel || 'warn') === 'debug') {
+			log('Debug', `About to check merged data size for ${name}: ${JSON.stringify(mergedData).length} bytes`);
+		}
+
+		const jsonString = serializeDatabase(mergedData);
+		const sizeInBytes = Buffer.byteLength(jsonString, config.encoding);
 
 		let sizeStatus = { isCritical: false };
 		if (config.validateInput === true) {
-			sizeStatus = checkMergedDataSize(name, mergedData, config.maxFileSize);
+			sizeStatus = checkSizeBytes(name, sizeInBytes, config.maxFileSize);
 		}
 
 		log('Debug', `Size check passed for ${name}, updating database`);
@@ -40,7 +48,7 @@ module.exports = function setDatabase(database, name, data) {
 		database[name] = mergedData;
 
 		log('Debug', `Calling saveFile for ${name}`);
-		const saved = saveFile(database[name], name);
+		const saved = saveFile(database[name], name, jsonString);
 		if (!saved) {
 			database[name] = previousData;
 			return false;

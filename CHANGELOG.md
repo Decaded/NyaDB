@@ -4,6 +4,19 @@ All notable changes to the project will be documented in this file.
 
 ---
 
+## [6.3.1](https://www.npmjs.com/package/@decaded/nyadb/v/6.3.1) (2026-10-30)
+
+### Performance
+
+- Serialized the merged database once per `set()` instead of three times.
+- Skipped re-validation of already-merged data during debounced writes.
+- Computed the debug size message only when debug logging is enabled.
+- Applied configuration on construction instead of on every call.
+
+### Notes
+
+- No public API or on-disk format changes.
+
 ## [6.3.0](https://www.npmjs.com/package/@decaded/nyadb/v/6.3.0) (2026-10-08)
 
 ### Added

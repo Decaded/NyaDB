@@ -8,13 +8,14 @@ const { getDatabaseFilePath, safeAtomicWrite, serializeDatabase } = require('../
  * Uses atomic writes if both useAtomicWrites and validateInput are enabled.
  * @param {object} database - The database object to be saved.
  * @param {string} dbName - The name of the database to be saved.
+ * @param {string} [serialized] - Pre-serialized JSON string, if the caller already produced it.
  * @returns {boolean} - Returns true if the database was saved successfully, false otherwise.
  */
-module.exports = function saveFile(database, dbName) {
+module.exports = function saveFile(database, dbName, serialized) {
 	try {
 		const fullPath = getDatabaseFilePath(dbName, { validate: config.validateInput === true });
 
-		const jsonString = serializeDatabase(database);
+		const jsonString = serialized !== undefined ? serialized : serializeDatabase(database);
 
 		if (config.useAtomicWrites === true && config.validateInput === true) {
 			safeAtomicWrite(undefined, dbName, jsonString, { ext: '.json' });

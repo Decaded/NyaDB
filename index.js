@@ -80,9 +80,7 @@ module.exports = class NyaDB {
 	 * @param {object} [data] - The data to be used in the action.
 	 * @returns {boolean} Whether the action was scheduled or executed successfully.
 	 */
-	scheduleAction(action, name, data) {
-		this.applyConfig();
-
+	scheduleAction(action, name, data, options) {
 		if (action === 'set' && config.writeDebounce > 0) {
 			if (this.debounceTimers[name]) {
 				clearTimeout(this.debounceTimers[name]);
@@ -101,13 +99,12 @@ module.exports = class NyaDB {
 			});
 
 			this.debounceTimers[name] = setTimeout(() => {
-				this.applyConfig();
 				const mergedData = this.pendingSetOperations[name];
 				delete this.pendingSetOperations[name];
 				delete this.debounceTimers[name];
 
 				try {
-					this.scheduledActions.push({ action: 'set', name, data: mergedData });
+					this.scheduledActions.push({ action: 'set', name, data: mergedData, dataValidated: true });
 					this.synchronizedScheduler();
 				} catch (error) {
 					this.lastError = error;
@@ -118,7 +115,12 @@ module.exports = class NyaDB {
 			return true;
 		}
 
-		this.scheduledActions.push({ action, name, data });
+		this.scheduledActions.push({
+			action,
+			name,
+			data,
+			dataValidated: Boolean(options && options.dataValidated),
+		});
 		return this.synchronizedScheduler();
 	}
 
@@ -137,7 +139,7 @@ module.exports = class NyaDB {
 		delete this.pendingSetOperations[name];
 
 		if (flush && pending) {
-			this.scheduledActions.push({ action: 'set', name, data: pending });
+			this.scheduledActions.push({ action: 'set', name, data: pending, dataValidated: true });
 		}
 	}
 
@@ -171,7 +173,6 @@ module.exports = class NyaDB {
 	 * @returns {boolean} Whether the action succeeded.
 	 */
 	scheduler() {
-		this.applyConfig();
 		const action = this.scheduledActions.shift();
 		log('Action Scheduled', action.action, action.name, action.data);
 		switch (action.action) {
@@ -183,7 +184,9 @@ module.exports = class NyaDB {
 				this.database = loadDatabase();
 				return true;
 			case 'set':
-				return setDatabase(this.database, action.name, action.data);
+				return setDatabase(this.database, action.name, action.data, {
+					dataValidated: action.dataValidated === true,
+				});
 			case 'clear':
 				return clearDatabase(action.name, this.database);
 			case 'rename':
@@ -203,7 +206,6 @@ module.exports = class NyaDB {
 	 */
 	create(name) {
 		try {
-			this.applyConfig();
 			if (config.validateInput === true) validateDatabaseName(name);
 
 			if (Object.prototype.hasOwnProperty.call(this.database, name)) {
@@ -230,7 +232,6 @@ module.exports = class NyaDB {
 	 */
 	delete(name) {
 		try {
-			this.applyConfig();
 			if (config.validateInput === true) validateDatabaseName(name);
 
 			if (!Object.prototype.hasOwnProperty.call(this.database, name)) {
@@ -259,7 +260,6 @@ module.exports = class NyaDB {
 	 */
 	set(name, data) {
 		try {
-			this.applyConfig();
 			if (config.validateInput === true) {
 				validateDatabaseName(name);
 				validateData(data);
@@ -272,7 +272,7 @@ module.exports = class NyaDB {
 				throw error;
 			}
 
-			return this.scheduleAction('set', name, data);
+			return this.scheduleAction('set', name, data, { dataValidated: true });
 		} catch (error) {
 			if (error && error.isCritical) {
 				throw error;
@@ -298,7 +298,6 @@ module.exports = class NyaDB {
 	 * }
 	 */
 	get(name) {
-		this.applyConfig();
 		if (Object.prototype.hasOwnProperty.call(this.database, name)) {
 			// Merge pending writes from debounced set() operations
 			const pending = this.pendingSetOperations[name];
@@ -319,7 +318,6 @@ module.exports = class NyaDB {
 	 * console.log(allDatabases); // ['users', 'posts', 'comments']
 	 */
 	getList() {
-		this.applyConfig();
 		return Object.keys(this.database);
 	}
 
@@ -328,7 +326,6 @@ module.exports = class NyaDB {
 	 * @returns {boolean} Whether the reload action completed successfully.
 	 */
 	reload() {
-		this.applyConfig();
 		this.flushPendingSets();
 		return this.scheduleAction('load');
 	}
@@ -351,7 +348,6 @@ module.exports = class NyaDB {
 	 * nyadb.size(['test1', 'test2']); // Returns sizes for multiple databases with total
 	 */
 	size(names) {
-		this.applyConfig();
 		return size(names, this.database);
 	}
 
@@ -361,7 +357,6 @@ module.exports = class NyaDB {
 	 * @returns {object|null} Size status information for the requested database(s).
 	 */
 	sizeStatus(names) {
-		this.applyConfig();
 		return size.getStatus(names, this.database);
 	}
 
@@ -376,7 +371,6 @@ module.exports = class NyaDB {
 	 */
 	exists(name) {
 		try {
-			this.applyConfig();
 			if (config.validateInput === true) validateDatabaseName(name);
 
 			return Object.prototype.hasOwnProperty.call(this.database, name);
@@ -396,7 +390,6 @@ module.exports = class NyaDB {
 	 */
 	clear(name) {
 		try {
-			this.applyConfig();
 			if (config.validateInput === true) validateDatabaseName(name);
 
 			if (!Object.prototype.hasOwnProperty.call(this.database, name)) {
@@ -425,7 +418,6 @@ module.exports = class NyaDB {
 	 */
 	rename(oldName, newName) {
 		try {
-			this.applyConfig();
 			if (config.validateInput === true) {
 				validateDatabaseName(oldName);
 				validateDatabaseName(newName);
